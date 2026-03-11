@@ -43,24 +43,32 @@ let backend = "none";
 // ─── Model initialization ─────────────────────────────────────────────────────
 async function initModel() {
   try {
-    // Try backends in descending performance order
-    for (const b of ["webgl", "cpu"]) {
+    // Try backends in descending performance order.
+    // En iOS Safari, WebGL dentro de Workers NO está soportado y puede lanzar
+    // en lugar de rechazar. El bloque try/catch individual captura ambos casos.
+    const backendsToTry = ["webgl", "cpu"];
+    let backendSet = false;
+    for (const b of backendsToTry) {
       try {
         await tf.setBackend(b);
         await tf.ready();
         backend = tf.getBackend();
+        backendSet = true;
         break;
       } catch (_) { /* backend unavailable, try next */ }
     }
+    if (!backendSet) throw new Error("No viable backend found (webgl and cpu both failed)");
 
     if (backend === "webgl") {
       // WEBGL_PACK: fuses element-wise ops into fewer shader calls.
       // WEBGL_PACK_DEPTHWISECONV: fuses depthwise convolutions (used heavily
       //   in ESRGAN/RRDB-style SR models). Both reduce GPU command overhead
       //   by 30-60%, especially important when dispatching many small tiles.
-      tf.env().set("WEBGL_PACK",               true);
-      tf.env().set("WEBGL_PACK_DEPTHWISECONV",  true);
-      tf.env().set("WEBGL_FORCE_F16_TEXTURES",  false); // keep f32 precision
+      try {
+        tf.env().set("WEBGL_PACK",               true);
+        tf.env().set("WEBGL_PACK_DEPTHWISECONV",  true);
+        tf.env().set("WEBGL_FORCE_F16_TEXTURES",  false); // keep f32 precision
+      } catch (_) { /* env flags not available in this TF.js build */ }
     }
 
     model = await tf.loadGraphModel(MODEL_URL);
