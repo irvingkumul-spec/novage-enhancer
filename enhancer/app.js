@@ -113,16 +113,7 @@ function computeTileParams(srcW, srcH) {
  * Minimum 2: even on low-end hardware, 2 workers gives meaningful pipelining
  * (one building/compositing while the other is on the GPU).
  */
-/** Detecta dispositivos móviles / táctiles para ajustar uso de memoria. */
-function isMobileDevice() {
-  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-         (navigator.maxTouchPoints > 1 && window.innerWidth < 900);
-}
-
 function computePoolSize() {
-  // En móvil: 1 worker máximo. Cada worker carga ~80 MB del modelo;
-  // iOS Safari mata la pestaña alrededor de los 300–500 MB totales.
-  if (isMobileDevice()) return 1;
   const hw = navigator.hardwareConcurrency || 4;
   if (hw >= 16) return 6;
   if (hw >= 8)  return 5;
@@ -222,11 +213,6 @@ function buildTileRGB(srcX, srcY, srcW, srcH, PAD) {
   return rgb;
 }
 
-// URL absoluta del worker, resuelta desde la ubicación del script actual.
-// Evita que rutas relativas fallen cuando Shopify/Vercel sirve el HTML
-// desde una sub-ruta distinta a donde vive worker.js.
-const WORKER_URL = new URL("worker.js", location.href).href;
-
 // ════════════════════════════════════════════════════════════════════════════
 // §6  WORKER POOL
 // ════════════════════════════════════════════════════════════════════════════
@@ -263,6 +249,8 @@ class WorkerPool {
     this._terminated = false;
   }
 
+  /** Spawn all workers. Returns a promise that resolves with the GPU backend name. */
+  init(onProgress) {
     return new Promise((resolve, reject) => {
       let readyCount = 0;
       let settledCount = 0;
@@ -277,7 +265,7 @@ class WorkerPool {
       };
 
       for (let i = 0; i < this._targetSize; i++) {
-        const w   = new Worker(WORKER_URL);
+        const w   = new Worker("worker.js");
         const idx = i;
         w._id     = idx;
         w._busy   = false;
@@ -570,30 +558,17 @@ class TileCompositor {
       }
     }
 
-    const imgData = new ImageData(tmpRGBA, outEffW, outEffH);
+    // OffscreenCanvas: lives ~1ms, GC'd immediately after drawImage.
+    // GPU-accelerated blit with bilinear downscaling to the preview size.
+    const osc = new OffscreenCanvas(outEffW, outEffH);
+    osc.getContext("2d").putImageData(new ImageData(tmpRGBA, outEffW, outEffH), 0, 0);
+
     const s  = this._prevScale;
     const px = Math.floor(dstX  * s);
     const py = Math.floor(dstY  * s);
     const pw = Math.ceil(outEffW * s);
     const ph = Math.ceil(outEffH * s);
-
-    // OffscreenCanvas: GPU-accelerated blit. No disponible en iOS Safari < 17
-    // ni en algunos WebViews Android. Fallback: drawImage desde un <canvas>
-    // temporal en el hilo principal — más lento pero universalmente compatible.
-    if (typeof OffscreenCanvas !== "undefined") {
-      try {
-        const osc = new OffscreenCanvas(outEffW, outEffH);
-        osc.getContext("2d").putImageData(imgData, 0, 0);
-        this._prevCtx.drawImage(osc, 0, 0, outEffW, outEffH, px, py, pw, ph);
-        return;
-      } catch (_) { /* fall through to fallback */ }
-    }
-    // Fallback: canvas temporal del DOM (compatible con todos los navegadores)
-    const tmp = document.createElement("canvas");
-    tmp.width  = outEffW;
-    tmp.height = outEffH;
-    tmp.getContext("2d").putImageData(imgData, 0, 0);
-    this._prevCtx.drawImage(tmp, 0, 0, outEffW, outEffH, px, py, pw, ph);
+    this._prevCtx.drawImage(osc, 0, 0, outEffW, outEffH, px, py, pw, ph);
   }
 
   /** Promise that resolves when all bands have been flushed to the encoder. */
@@ -879,8 +854,7 @@ async function startPool() {
     if (mWorkers) mWorkers.textContent = `${pool.actualSize}/${size}`;
     if (mBackend) mBackend.textContent = pool.backend;
     processBtn.disabled = !currentImage;
-    const mobileNote = isMobileDevice() ? " · Modo móvil (1 worker, CPU)" : "";
-    setStatus(currentImage ? "Imagen lista. Pulsa Procesar ×4." : `Worker pool listo (${pool.actualSize} workers · ${pool.backend}${mobileNote}). Esperando imagen...`);
+    setStatus(currentImage ? "Imagen lista. Pulsa Procesar ×4." : `Worker pool listo (${pool.actualSize} workers · ${pool.backend}). Esperando imagen...`);
   } catch (err) {
     setStatus("Error iniciando workers: " + err.message, true);
   }
