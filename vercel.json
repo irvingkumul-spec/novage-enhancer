@@ -5,3 +5,11 @@
     { "src": "^/removebg$", "dest": "/removebg/index.html" }
   ]
 }
+{
+  "routes": [
+    { "src": "^/$", "dest": "/enhancer/index.html" },
+    { "src": "^/enhancer$", "dest": "/enhancer/index.html" },
+    { "src": "^/removebg$", "dest": "/removebg/index.html" },
+    { "src": "^/dtf$", "dest": "/dtf/index.html" }
+  ]
+}
