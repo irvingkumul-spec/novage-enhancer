@@ -1,12 +1,5 @@
 {
   "routes": [
-    { "src": "^/$", "dest": "/index.html" },
-    { "src": "^/enhancer$", "dest": "/index.html" },
-    { "src": "^/removebg$", "dest": "/removebg/index.html" }
-  ]
-}
-{
-  "routes": [
     { "src": "^/$", "dest": "/enhancer/index.html" },
     { "src": "^/enhancer$", "dest": "/enhancer/index.html" },
     { "src": "^/removebg$", "dest": "/removebg/index.html" },
