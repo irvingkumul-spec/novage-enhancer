@@ -265,7 +265,7 @@ class WorkerPool {
       };
 
       for (let i = 0; i < this._targetSize; i++) {
-        const w   = new Worker("worker.js");
+        const w   = new Worker("/enhancer/worker.js")
         const idx = i;
         w._id     = idx;
         w._busy   = false;
