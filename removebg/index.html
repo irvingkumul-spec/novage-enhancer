@@ -1,25 +1,885 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Removedor de Fondo - NOVAGE</title>
-  <link rel="stylesheet" href="/shared/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eliminador de Fondos Pro</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: linear-gradient(135deg, #0a0a0a 0%, #1F1F21 100%);
+      color:#fff;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;
+      padding:40px 20px;
+      line-height:1.6;
+      min-height: 100vh;
+    }
+    .container {
+      max-width:1400px;
+      margin:0 auto;
+      background-color: #1F1F21;
+      border-radius: 20px;
+      padding: 50px 60px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      text-align: center;
+    }
+    h1 { color:#FFFFFF; font-size:3rem; margin-bottom:20px; font-weight:700; line-height:1.2; letter-spacing:-0.5px; }
+    .subtitle { color:#cccccc; font-size:1.25rem; line-height:1.6; margin-bottom:50px; max-width:700px; margin-left:auto; margin-right:auto; }
+    .upload-section { margin-bottom:30px; }
+    .upload-label { color:#E0E0E0; font-size:11px; margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; font-weight:500; display:block; }
+    .upload-box { background:rgba(227,252,2,0.05); border:3px dashed #E3FC02; border-radius:20px; padding:80px 40px; text-align:center; cursor:pointer; transition:.3s; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .upload-box:hover,.upload-box.highlight { border-color:#c7e002; background:rgba(227,252,2,0.1); transform:translateY(-2px); }
+    .upload-box input[type=file] { position:absolute; left:-9999px; }
+    .upload-icon { width:50px; height:50px; margin:0 0 15px 0; }
+    .upload-text { color:#E3FC02; font-size:1.3rem; font-weight:500; word-wrap:break-word; }
+    .upload-subtext { color:#888; font-size:.95rem; margin-top:10px; }
+    .upload-subtext kbd { background:#3A3A3C; padding:3px 8px; border-radius:4px; font-family:inherit; color:#E3FC02; border:1px solid #4A4A4C; }
+    .upload-link { color:#E3FC02; text-decoration:underline; font-weight:bold; }
+    .tools-container { display:none; }
+    .tools-container.active { display:block; }
+    .quick-actions,.tools-section,.preview-section,.download-section { background:#2A2A2C; border-radius:12px; padding:20px; margin-bottom:20px; border:1px solid #3A3A3C; }
+    .section-title { color:#E0E0E0; font-size:14px; margin-bottom:15px; text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+    .actions-grid { display:grid; grid-template-columns:50px 1fr 1fr 1fr; gap:10px; align-items:stretch; }
+    .color-picker-btn { width:100%; height:40px; border:2px solid #3A3A3C; border-radius:8px; cursor:pointer; position:relative; overflow:hidden; background:#1F1F21; transition:.2s; }
+    .color-picker-btn:hover { border-color:#E3FC02; transform:translateY(-1px); box-shadow:0 2px 8px rgba(227,252,2,.2); }
+    .color-picker-btn input[type=color] { position:absolute; top:-5px; left:-5px; width:calc(100% + 10px); height:calc(100% + 10px); border:none; cursor:pointer; }
+    .btn { padding:10px 16px; border-radius:8px; border:2px solid #3A3A3C; background:#1F1F21; color:#fff; cursor:pointer; font-size:12px; font-weight:600; transition:.3s; text-transform:uppercase; letter-spacing:.5px; position:relative; overflow:hidden; }
+    .btn::before { content:''; position:absolute; top:50%; left:50%; width:0; height:0; border-radius:50%; background:rgba(227,252,2,.1); transform:translate(-50%,-50%); transition:width .4s, height .4s; }
+    .btn:hover::before { width:300px; height:300px; }
+    .btn:hover { border-color:#E3FC02; color:#E3FC02; transform:translateY(-1px); box-shadow:0 2px 8px rgba(227,252,2,.15); }
+    .btn:active { transform:translateY(0); }
+    .btn:disabled { opacity:.3; cursor:not-allowed; }
+    .btn-active { background:#E3FC02; color:#1F1F21; border-color:#E3FC02; box-shadow:0 2px 8px rgba(227,252,2,.3); }
+    .tools-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:15px; }
+    .tolerance-control { margin-top:15px; }
+    .tolerance-label { color:#E0E0E0; font-size:12px; margin-bottom:8px; display:block; font-weight:500; }
+    input[type=range] { width:100%; height:6px; background:#3A3A3C; border-radius:3px; outline:none; -webkit-appearance:none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; background:#E3FC02; cursor:pointer; border-radius:50%; transition:all .3s; }
+    input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.2); box-shadow:0 0 10px rgba(227,252,2,.5); }
+    input[type=range]::-moz-range-thumb { width:18px; height:18px; background:#E3FC02; cursor:pointer; border-radius:50%; border:none; }
+    .preview-section { position:relative; }
+    .preview-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; }
+    .zoom-control { display:flex; gap:8px; align-items:center; }
+    .zoom-btn { width:32px; height:32px; background:#1F1F21; border:2px solid #3A3A3C; color:#E0E0E0; cursor:pointer; border-radius:8px; font-size:16px; display:flex; align-items:center; justify-content:center; transition:.3s; font-weight:bold; }
+    .zoom-btn:hover { border-color:#E3FC02; color:#E3FC02; transform:scale(1.05); }
+    .zoom-level { color:#E3FC02; font-size:12px; min-width:50px; text-align:center; font-weight:600; }
+    .preview-wrapper { background:repeating-conic-gradient(#444 0% 25%,#333 0% 50%) 50%/20px 20px; border-radius:12px; min-height:600px; position:relative; overflow:hidden; }
+    .preview-viewport { width:100%; height:600px; position:relative; cursor:crosshair; }
+    .preview-viewport.panning { cursor:move; }
+    .canvas-stage { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(1); transform-origin:50% 50%; will-change:transform; }
+    .canvas-stack { position:relative; display:inline-block; }
+    canvas#canvas { border:2px solid #E3FC02; display:block; box-shadow:0 0 20px rgba(0,0,0,.5); image-rendering:pixelated; cursor:crosshair; }
+    canvas#hudCanvas { position:absolute; top:0; left:0; pointer-events:none; }
+    .sidebar-controls { position:absolute; right:20px; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:10px; z-index:10; }
+    .sidebar-btn { width:44px; height:44px; background:rgba(31,31,33,.95); border:2px solid #3A3A3C; border-radius:8px; color:#E0E0E0; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:9px; transition:.3s; padding:4px; }
+    .sidebar-btn:hover { border-color:#E3FC02; color:#E3FC02; transform:scale(1.05); }
+    .sidebar-btn:disabled { opacity:.3; cursor:not-allowed; transform:none; }
+    .sidebar-btn .icon { font-size:16px; margin-bottom:2px; }
+    .download-section { display:grid; grid-template-columns:1fr auto; gap:12px; }
+    .btn-primary { background:#E3FC02; color:#1F1F21; border-color:#E3FC02; padding:14px 24px; font-size:12px; font-weight:700; box-shadow:0 4px 15px rgba(227,252,2,.3); }
+    .btn-primary:hover { background:#f0ff33; border-color:#f0ff33; box-shadow:0 6px 20px rgba(227,252,2,.5); }
+    .btn-secondary { background:#1F1F21; color:#E0E0E0; border-color:#3A3A3C; padding:14px 24px; font-size:12px; }
+    .btn-secondary:hover { border-color:#E3FC02; color:#E3FC02; }
+    .status-message { padding:12px 20px; border-radius:8px; margin-top:15px; font-size:12px; display:none; font-weight:500; }
+    .status-success { background:rgba(227,252,2,.1); color:#E3FC02; border:1px solid #E3FC02; }
+    .status-error { background:rgba(255,107,107,.1); color:#ff6b6b; border:1px solid #ff6b6b; }
+
+    #brushSizeGroup,#restoreBrushGroup,#drawBrushGroup,#contractEdgesGroup { margin-top:15px; display:none; }
+
+    .tool-panel { padding:15px; border-radius:8px; border:2px solid rgba(227,252,2,0.35); background:rgba(227,252,2,0.05); }
+    .tool-panel.draw-panel { border-color:rgba(120,200,255,0.5); background:rgba(120,200,255,0.04); }
+    .tool-panel.contract-panel { border-color:#E3FC02; background:rgba(227,252,2,0.08); }
+
+    .draw-row { display:grid; grid-template-columns:44px 1fr; gap:12px; align-items:center; margin-top:12px; }
+    .draw-color-wrap { position:relative; width:44px; height:36px; border:2px solid #3A3A3C; border-radius:8px; overflow:hidden; cursor:pointer; transition:.2s; background:#1F1F21; }
+    .draw-color-wrap:hover { border-color:rgba(120,200,255,.8); }
+    .draw-color-wrap input[type=color] { position:absolute; top:-4px; left:-4px; width:calc(100%+8px); height:calc(100%+8px); border:none; cursor:pointer; }
+    .hint-text { color:#777; font-size:11px; margin-top:8px; }
+
+    .semi-check-section { display:flex; align-items:center; justify-content:flex-end; padding:0 4px; margin-bottom:10px; }
+    .semi-check-label { display:inline-flex; align-items:center; gap:10px; cursor:pointer; color:#B0B0B0; font-size:12px; font-weight:500; letter-spacing:.3px; text-transform:uppercase; user-select:none; transition:color .2s; }
+    .semi-check-label:hover { color:#E0E0E0; }
+    .semi-check-label input[type=checkbox] { position:absolute; opacity:0; width:0; height:0; }
+    .semi-check-box { width:18px; height:18px; min-width:18px; border:2px solid #3A3A3C; border-radius:4px; background:#1F1F21; display:inline-flex; align-items:center; justify-content:center; transition:all .2s; }
+    .semi-check-label:hover .semi-check-box { border-color:#E3FC02; }
+    .semi-check-label input:checked ~ .semi-check-box { background:#E3FC02; border-color:#E3FC02; }
+    .semi-check-box::after { content:''; width:5px; height:9px; border:2px solid #1F1F21; border-top:none; border-left:none; transform:rotate(45deg) translateY(-1px); opacity:0; transition:opacity .15px; }
+    .semi-check-label input:checked ~ .semi-check-box::after { opacity:1; }
+
+    /* ── Indicador DPI en botón de descarga ── */
+    .dpi-badge {
+      display:inline-block; background:#1F1F21; color:#E3FC02;
+      font-size:9px; font-weight:700; letter-spacing:.5px;
+      border:1px solid #E3FC02; border-radius:4px;
+      padding:2px 5px; margin-left:8px; vertical-align:middle;
+    }
+
+    @media (max-width:1024px){ .container{padding:40px;} h1{font-size:2.5rem;} }
+    @media (max-width:768px){
+      body{padding:20px 15px;}
+      .container{border-radius:16px;padding:35px 25px;}
+      h1{font-size:2.2rem;margin-bottom:15px;}
+      .subtitle{font-size:1.1rem;margin-bottom:35px;}
+      .upload-box{padding:60px 25px;}
+      .upload-text{font-size:1.15rem;}
+      .actions-grid{grid-template-columns:1fr;}
+      .tools-grid{grid-template-columns:repeat(2,1fr);}
+      .sidebar-controls{position:static;transform:none;flex-direction:row;justify-content:center;margin-top:15px;}
+    }
+  </style>
 </head>
 <body>
+<div class="container">
+  <h1>Eliminador de Fondos Pro</h1>
+  <p class="subtitle">Sube tu imagen y elimina fondos con precisión profesional usando herramientas avanzadas de selección y edición.</p>
 
-  <div class="novage-tools">
-    <h1 class="tools-title">Removedor de Fondo</h1>
-    <p class="tools-subtitle">
-      Elimina el fondo de tus imágenes automáticamente.
-    </p>
-
-    <div class="tool-card" style="max-width:700px;margin:40px auto;">
-      <h3>Sube tu imagen</h3>
-      <p>Selecciona un archivo para comenzar.</p>
-      <input type="file" class="tool-btn" style="border:none;">
+  <div class="upload-section">
+    <label class="upload-label"></label>
+    <div class="upload-box" id="uploadBox">
+      <input type="file" id="fileInput" accept="image/*">
+      <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="17 8 12 3 7 8"></polyline>
+        <line x1="12" y1="3" x2="12" y2="15"></line>
+      </svg>
+      <p class="upload-text">Arrastra tu imagen aquí o <span class="upload-link">haz clic para seleccionar</span></p>
+      <p class="upload-subtext">También puedes pegar con <kbd>Ctrl</kbd> + <kbd>V</kbd></p>
     </div>
   </div>
 
+  <div class="tools-container" id="toolsContainer">
+
+    <div class="quick-actions">
+      <div class="section-title">Acciones Rápidas</div>
+      <div class="actions-grid">
+        <div class="color-picker-btn"><input type="color" id="colorPicker" value="#ffffff"></div>
+        <button class="btn" id="btnRemoveColor">Remover Color</button>
+        <button class="btn" id="btnWhite">Remover Blanco</button>
+        <button class="btn" id="btnBlack">Remover Negro</button>
+      </div>
+    </div>
+
+    <div class="tools-section">
+      <div class="section-title">Herramientas</div>
+      <div class="tools-grid">
+        <button class="btn btn-active" id="btnGlobal">Global</button>
+        <button class="btn" id="btnWand">Varita</button>
+        <button class="btn" id="btnBrush">Manual</button>
+        <button class="btn" id="btnRestore">Restaurar</button>
+        <button class="btn" id="btnDraw">Dibujo</button>
+        <button class="btn" id="btnContractEdges">Contraer Bordes</button>
+      </div>
+
+      <div class="tolerance-control">
+        <label class="tolerance-label">Tolerancia de Color: <span id="toleranceValue">30</span></label>
+        <input type="range" id="toleranceSlider" min="0" max="100" value="30">
+      </div>
+
+      <!-- Manual -->
+      <div id="brushSizeGroup">
+        <div class="tool-panel">
+          <label class="tolerance-label">Tamaño del Pincel: <span id="brushValue">20</span>px</label>
+          <input type="range" id="brushSlider" min="5" max="100" value="20">
+        </div>
+      </div>
+
+      <!-- Restaurar -->
+      <div id="restoreBrushGroup">
+        <div class="tool-panel">
+          <label class="tolerance-label">Tamaño Pincel Restaurador: <span id="restoreBrushValue">20</span>px</label>
+          <input type="range" id="restoreBrushSlider" min="5" max="100" value="20">
+          <p class="hint-text">Pinta sobre zonas borradas para recuperar los píxeles originales.</p>
+        </div>
+      </div>
+
+      <!-- Dibujo -->
+      <div id="drawBrushGroup">
+        <div class="tool-panel draw-panel">
+          <label class="tolerance-label">Tamaño del Pincel: <span id="drawBrushValue">20</span>px</label>
+          <input type="range" id="drawBrushSlider" min="1" max="100" value="20">
+          <div class="draw-row">
+            <div class="draw-color-wrap" title="Color de pintura">
+              <input type="color" id="drawColorPicker" value="#ff0000">
+            </div>
+            <div>
+              <label class="tolerance-label" style="margin-bottom:4px;">Opacidad: <span id="drawOpacityValue">100</span>%</label>
+              <input type="range" id="drawOpacitySlider" min="1" max="100" value="100">
+            </div>
+          </div>
+          <p class="hint-text">Pinta directamente sobre el lienzo con el color y opacidad elegidos.</p>
+        </div>
+      </div>
+
+      <!-- Contraer -->
+      <div id="contractEdgesGroup">
+        <div class="tool-panel contract-panel">
+          <label class="tolerance-label">Píxeles a Contraer: <span id="contractValue">1</span>px</label>
+          <input type="range" id="contractSlider" min="1" max="10" value="1">
+          <button class="btn btn-primary" id="btnApplyContract" style="margin-top:10px;width:100%;">Aplicar Contracción</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-section">
+      <div class="preview-header">
+        <div class="section-title" style="margin:0;">Vista Previa</div>
+        <div class="zoom-control">
+          <button class="zoom-btn" id="zoomOut">−</button>
+          <span class="zoom-level" id="zoomLevel">100%</span>
+          <button class="zoom-btn" id="zoomIn">+</button>
+          <button class="zoom-btn" id="zoomFit">⊙</button>
+          <input type="range" id="zoomSlider" min="10" max="400" value="100" style="width:100px;margin-left:8px;">
+        </div>
+      </div>
+      <div class="preview-wrapper" id="previewWrapper">
+        <div class="preview-viewport" id="previewViewport">
+          <div class="canvas-stage" id="canvasStage">
+            <div class="canvas-stack">
+              <canvas id="canvas"></canvas>
+              <canvas id="hudCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="sidebar-controls">
+          <button class="sidebar-btn" id="btnUndo"><span class="icon">↶</span><span>Deshacer</span></button>
+          <button class="sidebar-btn" id="btnRedo"><span class="icon">↷</span><span>Rehacer</span></button>
+          <button class="sidebar-btn" id="btnClear"><span class="icon">✕</span><span>Limpiar</span></button>
+          <button class="sidebar-btn" id="btnToggleLoupe"><span class="icon">◎</span><span>Lupa</span></button>
+          <button class="sidebar-btn" id="btnChangeBg"><span class="icon">◐</span><span>Fondo</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="semi-check-section">
+      <label class="semi-check-label" for="chkReduceSemi">
+        <input type="checkbox" id="chkReduceSemi" checked>
+        <span class="semi-check-box"></span>
+        Eliminar semitransparencias automáticamente
+      </label>
+    </div>
+
+    <div class="download-section">
+      <button class="btn btn-primary" id="btnDownload">
+        Descargar Imagen PNG <span class="dpi-badge">300 DPI</span>
+      </button>
+      <button class="btn btn-secondary" id="btnReset">Reiniciar Ediciones</button>
+    </div>
+
+    <div id="statusMessage" class="status-message"></div>
+  </div>
+</div>
+
+<script>
+// ─── Elementos ──────────────────────────────────────────────────────
+const fileInput        = document.getElementById('fileInput');
+const uploadBox        = document.getElementById('uploadBox');
+const toolsContainer   = document.getElementById('toolsContainer');
+const canvas           = document.getElementById('canvas');
+const hud              = document.getElementById('hudCanvas');
+const ctx              = canvas.getContext('2d', { willReadFrequently: true });
+const hctx             = hud.getContext('2d');
+const canvasStage      = document.getElementById('canvasStage');
+const previewViewport  = document.getElementById('previewViewport');
+const previewWrapper   = document.getElementById('previewWrapper');
+const statusMessage    = document.getElementById('statusMessage');
+
+const btnGlobal        = document.getElementById('btnGlobal');
+const btnWand          = document.getElementById('btnWand');
+const btnBrush         = document.getElementById('btnBrush');
+const btnRestore       = document.getElementById('btnRestore');
+const btnDraw          = document.getElementById('btnDraw');
+const btnContractEdges = document.getElementById('btnContractEdges');
+const btnUndo          = document.getElementById('btnUndo');
+const btnRedo          = document.getElementById('btnRedo');
+const btnClear         = document.getElementById('btnClear');
+const btnDownload      = document.getElementById('btnDownload');
+const btnReset         = document.getElementById('btnReset');
+const btnToggleLoupe   = document.getElementById('btnToggleLoupe');
+const btnChangeBg      = document.getElementById('btnChangeBg');
+const colorPicker      = document.getElementById('colorPicker');
+
+const toleranceSlider  = document.getElementById('toleranceSlider');
+const toleranceValue   = document.getElementById('toleranceValue');
+
+const brushSizeGroup   = document.getElementById('brushSizeGroup');
+const brushSlider      = document.getElementById('brushSlider');
+const brushValue       = document.getElementById('brushValue');
+
+const restoreBrushGroup  = document.getElementById('restoreBrushGroup');
+const restoreBrushSlider = document.getElementById('restoreBrushSlider');
+const restoreBrushValue  = document.getElementById('restoreBrushValue');
+
+const drawBrushGroup    = document.getElementById('drawBrushGroup');
+const drawBrushSlider   = document.getElementById('drawBrushSlider');
+const drawBrushValue    = document.getElementById('drawBrushValue');
+const drawColorPicker   = document.getElementById('drawColorPicker');
+const drawOpacitySlider = document.getElementById('drawOpacitySlider');
+const drawOpacityValue  = document.getElementById('drawOpacityValue');
+
+const contractEdgesGroup = document.getElementById('contractEdgesGroup');
+const contractSlider     = document.getElementById('contractSlider');
+const contractValue      = document.getElementById('contractValue');
+const btnApplyContract   = document.getElementById('btnApplyContract');
+
+const zoomInBtn   = document.getElementById('zoomIn');
+const zoomOutBtn  = document.getElementById('zoomOut');
+const zoomFitBtn  = document.getElementById('zoomFit');
+const zoomLevelEl = document.getElementById('zoomLevel');
+const zoomSlider  = document.getElementById('zoomSlider');
+
+// ─── Estado ─────────────────────────────────────────────────────────
+let originalImage    = null;
+let originalFileName = 'imagen';
+let originalCanvas   = null;
+let currentTool      = 'global';
+let tolerance        = 30;
+let brushSize        = 20;
+let restoreBrushSize = 20;
+let drawBrushSize    = 20;
+let drawColor        = '#ff0000';
+let drawOpacity      = 1.0;
+let history          = [];
+let redoHistory      = [];
+let zoom = 100, panX = 0, panY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0;
+let spaceDown = false, mouseButton = null;
+let isDrawing = false;
+let lastX = null, lastY = null;
+
+const bgStyles = [
+  'repeating-conic-gradient(#444 0% 25%,#333 0% 50%) 50%/20px 20px',
+  '#FFFFFF','#000000','#808080','#E3FC02'
+];
+let currentBgIndex = 0;
+
+// ─── Utilidades ─────────────────────────────────────────────────────
+function showStatus(msg, type='success') {
+  statusMessage.textContent = msg;
+  statusMessage.className = `status-message status-${type}`;
+  statusMessage.style.display = 'block';
+  setTimeout(() => statusMessage.style.display = 'none', 3000);
+}
+
+function saveToHistory() {
+  history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+  if (history.length > 50) history.shift();
+  redoHistory = [];
+  updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+  btnUndo.disabled = history.length === 0;
+  btnRedo.disabled = redoHistory.length === 0;
+}
+
+// ─── Carga ──────────────────────────────────────────────────────────
+uploadBox.addEventListener('click', () => fileInput.click());
+uploadBox.addEventListener('dragover',  e => { e.preventDefault(); uploadBox.classList.add('highlight'); });
+uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('highlight'));
+uploadBox.addEventListener('drop', e => {
+  e.preventDefault(); uploadBox.classList.remove('highlight');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) handleImageLoad(f);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleImageLoad(e.target.files[0]); });
+
+document.addEventListener('paste', e => {
+  for (const item of (e.clipboardData?.items || [])) {
+    if (item.type.startsWith('image/')) {
+      e.preventDefault();
+      handleImageLoad(item.getAsFile());
+      showStatus('Imagen pegada desde el portapapeles');
+      return;
+    }
+  }
+});
+
+function handleImageLoad(file) {
+  originalFileName = file.name.replace(/\.[^/.]+$/, '') || 'imagen';
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      originalImage = img;
+      canvas.width  = img.width;
+      canvas.height = img.height;
+      hud.width     = img.width;
+      hud.height    = img.height;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+
+      originalCanvas = document.createElement('canvas');
+      originalCanvas.width  = img.width;
+      originalCanvas.height = img.height;
+      originalCanvas.getContext('2d').drawImage(img, 0, 0);
+
+      toolsContainer.classList.add('active');
+      zoom = 100; panX = 0; panY = 0;
+      applyTransform();
+      history = []; redoHistory = [];
+      updateHistoryButtons();
+      showStatus('Imagen cargada correctamente');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+btnReset.addEventListener('click', () => {
+  if (!originalImage) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(originalImage, 0, 0);
+  history = []; redoHistory = [];
+  updateHistoryButtons();
+  showStatus('Imagen reiniciada');
+});
+
+// ─── Historial ──────────────────────────────────────────────────────
+btnUndo.addEventListener('click', () => {
+  if (!history.length) return;
+  redoHistory.push(ctx.getImageData(0,0,canvas.width,canvas.height));
+  ctx.putImageData(history.pop(), 0, 0);
+  updateHistoryButtons(); showStatus('Deshecho');
+});
+btnRedo.addEventListener('click', () => {
+  if (!redoHistory.length) return;
+  history.push(ctx.getImageData(0,0,canvas.width,canvas.height));
+  ctx.putImageData(redoHistory.pop(), 0, 0);
+  updateHistoryButtons(); showStatus('Rehecho');
+});
+btnClear.addEventListener('click', () => {
+  if (confirm('¿Estás seguro de que quieres limpiar toda la imagen?')) {
+    saveToHistory(); ctx.clearRect(0,0,canvas.width,canvas.height); showStatus('Canvas limpiado');
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key==='z' && !e.shiftKey) { e.preventDefault(); btnUndo.click(); }
+  if (e.ctrlKey && (e.key==='y' || (e.key==='z' && e.shiftKey))) { e.preventDefault(); btnRedo.click(); }
+});
+
+// ─── Herramientas ───────────────────────────────────────────────────
+function setTool(tool) {
+  currentTool = tool;
+  [btnGlobal,btnWand,btnBrush,btnRestore,btnDraw,btnContractEdges]
+    .forEach(b => b.classList.remove('btn-active'));
+  brushSizeGroup.style.display     = 'none';
+  restoreBrushGroup.style.display  = 'none';
+  drawBrushGroup.style.display     = 'none';
+  contractEdgesGroup.style.display = 'none';
+
+  if      (tool==='global')   btnGlobal.classList.add('btn-active');
+  else if (tool==='wand')     btnWand.classList.add('btn-active');
+  else if (tool==='brush')    { btnBrush.classList.add('btn-active');   brushSizeGroup.style.display='block'; }
+  else if (tool==='restore')  { btnRestore.classList.add('btn-active'); restoreBrushGroup.style.display='block'; }
+  else if (tool==='draw')     { btnDraw.classList.add('btn-active');    drawBrushGroup.style.display='block'; }
+  else if (tool==='contract') { btnContractEdges.classList.add('btn-active'); contractEdgesGroup.style.display='block'; }
+}
+
+btnGlobal.addEventListener('click',        () => { setTool('global');   showStatus('Modo Global activado'); });
+btnWand.addEventListener('click',          () => { setTool('wand');     showStatus('Modo Varita activado'); });
+btnBrush.addEventListener('click',         () => { setTool('brush');    showStatus('Pincel Borrador activado'); });
+btnRestore.addEventListener('click',       () => { setTool('restore');  showStatus('Pincel Restaurador activado'); });
+btnDraw.addEventListener('click',          () => { setTool('draw');     showStatus('Pincel Dibujo activado'); });
+btnContractEdges.addEventListener('click', () => { setTool('contract'); showStatus('Modo Contraer activado'); });
+
+toleranceSlider.addEventListener('input',    () => { tolerance        = +toleranceSlider.value;    toleranceValue.textContent    = tolerance; });
+brushSlider.addEventListener('input',        () => { brushSize        = +brushSlider.value;        brushValue.textContent        = brushSize; });
+restoreBrushSlider.addEventListener('input', () => { restoreBrushSize = +restoreBrushSlider.value; restoreBrushValue.textContent = restoreBrushSize; });
+drawBrushSlider.addEventListener('input',    () => { drawBrushSize    = +drawBrushSlider.value;    drawBrushValue.textContent    = drawBrushSize; });
+drawColorPicker.addEventListener('input',    () => { drawColor = drawColorPicker.value; });
+drawOpacitySlider.addEventListener('input',  () => { drawOpacity = +drawOpacitySlider.value/100; drawOpacityValue.textContent = drawOpacitySlider.value; });
+contractSlider.addEventListener('input',     () => { contractValue.textContent = contractSlider.value; });
+
+// ─── Algoritmos de remoción ──────────────────────────────────────────
+function colorDistance(c1,c2) {
+  const dr=c1[0]-c2[0], dg=c1[1]-c2[1], db=c1[2]-c2[2];
+  return Math.sqrt(dr*dr+dg*dg+db*db);
+}
+
+function floodFill(x, y, targetColor) {
+  saveToHistory();
+  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const data=imgData.data, w=canvas.width, h=canvas.height;
+  const stack=[[x,y]], visited=new Uint8Array(w*h);
+  const tol=tolerance*2.55;
+  while(stack.length) {
+    const [cx,cy] = stack.pop();
+    if(cx<0||cx>=w||cy<0||cy>=h) continue;
+    const idx=cy*w+cx;
+    if(visited[idx]) continue;
+    const i=idx*4;
+    if(colorDistance([data[i],data[i+1],data[i+2]],targetColor)>tol) continue;
+    visited[idx]=1; data[i+3]=0;
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+  ctx.putImageData(imgData,0,0);
+  applySemiReduction();
+  showStatus('Área eliminada con varita mágica');
+}
+
+function removeColorGlobal(targetColor) {
+  saveToHistory();
+  const imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const data=imgData.data, tol=tolerance*2.55;
+  for(let i=0;i<data.length;i+=4)
+    if(colorDistance([data[i],data[i+1],data[i+2]],targetColor)<=tol) data[i+3]=0;
+  ctx.putImageData(imgData,0,0);
+  applySemiReduction();
+  showStatus('Color eliminado globalmente');
+}
+
+// ─── Pinceles fluidos ────────────────────────────────────────────────
+function withInterpolation(x, y, radius, fn) {
+  if (lastX === null) { fn(x, y); return; }
+  const dx = x - lastX, dy = y - lastY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const step = Math.max(0.5, radius * 0.4);
+  const steps = Math.ceil(dist / step);
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    fn(lastX + dx*t, lastY + dy*t);
+  }
+}
+
+function doErase(x, y) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  ctx.fill();
+  ctx.restore();
+}
+
+function doRestore(x, y) {
+  if (!originalCanvas) return;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, restoreBrushSize / 2, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(originalCanvas, 0, 0);
+  ctx.restore();
+}
+
+function doDraw(x, y) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = drawOpacity;
+  ctx.beginPath();
+  ctx.arc(x, y, drawBrushSize / 2, 0, Math.PI * 2);
+  ctx.fillStyle = drawColor;
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─── Eventos del canvas ─────────────────────────────────────────────
+function getCanvasCoords(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (canvas.width  / rect.width),
+    y: (clientY - rect.top)  * (canvas.height / rect.height)
+  };
+}
+
+canvas.addEventListener('mousedown', e => {
+  if (spaceDown || e.button===1 || e.button===2) return;
+  const {x, y} = getCanvasCoords(e.clientX, e.clientY);
+  if (x<0||x>=canvas.width||y<0||y>=canvas.height) return;
+
+  if (currentTool === 'wand') {
+    const p = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
+    floodFill(Math.floor(x), Math.floor(y), [p[0],p[1],p[2]]);
+    return;
+  }
+  if (currentTool === 'global') {
+    const p = ctx.getImageData(Math.floor(x), Math.floor(y), 1, 1).data;
+    removeColorGlobal([p[0],p[1],p[2]]);
+    return;
+  }
+  if (['brush','restore','draw'].includes(currentTool)) {
+    saveToHistory();
+    isDrawing = true;
+    lastX = x; lastY = y;
+    if      (currentTool==='brush')   doErase(x, y);
+    else if (currentTool==='restore') doRestore(x, y);
+    else if (currentTool==='draw')    doDraw(x, y);
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!isDrawing) return;
+  const {x, y} = getCanvasCoords(e.clientX, e.clientY);
+
+  if (currentTool==='brush') {
+    withInterpolation(x, y, brushSize/2,       (px,py) => doErase(px, py));
+  } else if (currentTool==='restore') {
+    withInterpolation(x, y, restoreBrushSize/2, (px,py) => doRestore(px, py));
+  } else if (currentTool==='draw') {
+    withInterpolation(x, y, drawBrushSize/2,    (px,py) => doDraw(px, py));
+  }
+
+  lastX = x; lastY = y;
+});
+
+canvas.addEventListener('mouseup', () => {
+  if (isDrawing) {
+    isDrawing = false; lastX = null; lastY = null;
+    const msgs = { brush:'Borrado finalizado', restore:'Píxeles restaurados', draw:'Trazo guardado' };
+    showStatus(msgs[currentTool] || '');
+  }
+});
+canvas.addEventListener('mouseleave', () => { isDrawing=false; lastX=null; lastY=null; });
+
+// ─── Zoom & Panning ─────────────────────────────────────────────────
+function applyTransform() {
+  canvasStage.style.transform = `translate(-50%,-50%) translate(${panX}px,${panY}px) scale(${zoom/100})`;
+  zoomLevelEl.textContent = `${Math.round(zoom)}%`;
+  zoomSlider.value = zoom;
+}
+zoomInBtn.addEventListener('click',  () => { zoom=Math.min(400,zoom+10);  applyTransform(); });
+zoomOutBtn.addEventListener('click', () => { zoom=Math.max(10,zoom-10);   applyTransform(); });
+zoomFitBtn.addEventListener('click', () => { zoom=100; panX=0; panY=0;   applyTransform(); });
+zoomSlider.addEventListener('input', () => { zoom=+zoomSlider.value;      applyTransform(); });
+previewViewport.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoom = Math.max(10, Math.min(400, zoom - e.deltaY*0.1));
+  applyTransform();
+}, { passive:false });
+
+previewViewport.addEventListener('mousedown', e => {
+  mouseButton = e.button;
+  if (e.button===1||e.button===2||(e.button===0&&spaceDown)) {
+    e.preventDefault(); isPanning=true;
+    panStartX=e.clientX-panX; panStartY=e.clientY-panY;
+    previewViewport.classList.add('panning');
+  }
+});
+previewViewport.addEventListener('mousemove', e => {
+  if (isPanning) { panX=e.clientX-panStartX; panY=e.clientY-panStartY; applyTransform(); }
+});
+const stopPan = () => { isPanning=false; mouseButton=null; previewViewport.classList.remove('panning'); };
+previewViewport.addEventListener('mouseup',    stopPan);
+previewViewport.addEventListener('mouseleave', stopPan);
+document.addEventListener('keydown', e => {
+  if (e.code==='Space'&&!spaceDown) { spaceDown=true; if(mouseButton===0) previewViewport.classList.add('panning'); }
+});
+document.addEventListener('keyup', e => {
+  if (e.code==='Space') { spaceDown=false; if(!isPanning) previewViewport.classList.remove('panning'); }
+});
+
+// ─── Botones Quick ──────────────────────────────────────────────────
+document.getElementById('btnRemoveColor').addEventListener('click', () => {
+  const h = colorPicker.value;
+  removeColorGlobal([parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+});
+document.getElementById('btnWhite').addEventListener('click', () => removeColorGlobal([255,255,255]));
+document.getElementById('btnBlack').addEventListener('click', () => removeColorGlobal([0,0,0]));
+
+// ─── Checkbox semitransparencias ────────────────────────────────────
+const chkReduceSemi = document.getElementById('chkReduceSemi');
+
+function applySemiReduction() {
+  if (!chkReduceSemi.checked) return;
+  const img = ctx.getImageData(0,0,canvas.width,canvas.height), d = img.data;
+  for (let i=0; i<d.length; i+=4) d[i+3] = d[i+3]<127 ? 0 : 255;
+  ctx.putImageData(img, 0, 0);
+}
+
+// ─── Contraer bordes ────────────────────────────────────────────────
+function contractEdges(imageData, pixels) {
+  const {width:w,height:h,data:src} = imageData;
+  const dst = new Uint8ClampedArray(src);
+  const p2 = pixels*pixels;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
+    const idx=(y*w+x)*4;
+    if(src[idx+3]===0) continue;
+    let erode=false;
+    outer: for(let dy=-pixels;dy<=pixels;dy++) for(let dx=-pixels;dx<=pixels;dx++) {
+      if(dx*dx+dy*dy>p2) continue;
+      const nx=x+dx, ny=y+dy;
+      if(nx<0||nx>=w||ny<0||ny>=h||src[(ny*w+nx)*4+3]===0) { erode=true; break outer; }
+    }
+    if(erode) dst[idx+3]=0;
+  }
+  return new ImageData(dst,w,h);
+}
+
+btnApplyContract.addEventListener('click', () => {
+  saveToHistory(); showStatus('Procesando contracción...','success');
+  setTimeout(() => {
+    let img = ctx.getImageData(0,0,canvas.width,canvas.height);
+    img = contractEdges(img, +contractSlider.value);
+    const d=img.data;
+    for(let i=3;i<d.length;i+=4) d[i] = d[i]<127 ? 0 : 255;
+    ctx.putImageData(img,0,0);
+    showStatus(`Bordes contraídos ${contractSlider.value} píxel(es)`,'success');
+  },50);
+});
+
+// ─── HUD: cruceta + lupa ────────────────────────────────────────────
+let loupeEnabled = true;
+const LOUPE_RADIUS=60, LOUPE_ZOOM=4;
+
+btnToggleLoupe.addEventListener('click', () => {
+  loupeEnabled=!loupeEnabled;
+  showStatus(loupeEnabled?'Lupa activada':'Lupa desactivada');
+  hctx.clearRect(0,0,hud.width,hud.height);
+});
+
+btnChangeBg.addEventListener('click', () => {
+  currentBgIndex=(currentBgIndex+1)%bgStyles.length;
+  previewWrapper.style.background=bgStyles[currentBgIndex];
+  showStatus(['Cuadrícula','Blanco','Negro','Gris','Amarillo'][currentBgIndex]);
+});
+
+function drawHUD(evt) {
+  hctx.clearRect(0,0,hud.width,hud.height);
+  const {x,y}=getCanvasCoords(evt.clientX,evt.clientY);
+
+  hctx.save();
+  hctx.strokeStyle='rgba(227,252,2,0.9)'; hctx.lineWidth=1; hctx.setLineDash([4,3]);
+  hctx.beginPath(); hctx.moveTo(0,y+.5); hctx.lineTo(hud.width,y+.5); hctx.stroke();
+  hctx.beginPath(); hctx.moveTo(x+.5,0); hctx.lineTo(x+.5,hud.height); hctx.stroke();
+  hctx.setLineDash([]);
+  hctx.beginPath(); hctx.arc(x+.5,y+.5,2,0,Math.PI*2); hctx.fillStyle='#E3FC02'; hctx.fill();
+  hctx.restore();
+
+  if (!loupeEnabled) return;
+  const sx=Math.max(0,Math.min(canvas.width-1,x)), sy=Math.max(0,Math.min(canvas.height-1,y));
+  const srcSize=Math.floor(LOUPE_RADIUS/LOUPE_ZOOM);
+  const sLeft=Math.max(0,sx-srcSize), sTop=Math.max(0,sy-srcSize);
+  const sW=Math.min(canvas.width-sLeft,srcSize*2), sH=Math.min(canvas.height-sTop,srcSize*2);
+  hctx.save();
+  hctx.beginPath(); hctx.arc(sx,sy,LOUPE_RADIUS,0,Math.PI*2); hctx.closePath(); hctx.clip();
+  hctx.imageSmoothingEnabled=false;
+  hctx.drawImage(canvas,sLeft,sTop,sW,sH,sx-LOUPE_RADIUS,sy-LOUPE_RADIUS,sW*LOUPE_ZOOM,sH*LOUPE_ZOOM);
+  hctx.restore();
+  hctx.beginPath(); hctx.arc(sx,sy,LOUPE_RADIUS+.5,0,Math.PI*2);
+  hctx.strokeStyle='#E3FC02'; hctx.lineWidth=2; hctx.stroke();
+}
+
+previewViewport.addEventListener('mousemove', e => { if(canvasStage.style.display!=='none') drawHUD(e); });
+previewViewport.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+previewViewport.addEventListener('mouseleave', () => hctx.clearRect(0,0,hud.width,hud.height));
+
+// ═══════════════════════════════════════════════════════════════════
+//  EXPORTACIÓN 300 DPI  —  Inyección del chunk pHYs en el binario PNG
+//  pHYs define píxeles por unidad de medida real.
+//  300 DPI = 300 / 0.0254 = 11811 píxeles por metro (estándar ISO 15930)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Tabla CRC-32 para validación de chunks PNG.
+ * El estándar PNG requiere CRC32 al final de cada chunk.
+ */
+function buildCRC32Table() {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) {
+      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    table[i] = c;
+  }
+  return table;
+}
+const CRC_TABLE = buildCRC32Table();
+
+function crc32(bytes) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) {
+    crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+/**
+ * Inyecta el chunk pHYs (Physical Pixel Dimensions) en un ArrayBuffer PNG.
+ * Lo inserta justo después del chunk IHDR (posición fija: byte 33).
+ * Estructura del chunk: [4B longitud][4B tipo][9B datos][4B CRC]
+ *
+ * @param {ArrayBuffer} pngBuffer  - Buffer original del PNG
+ * @param {number}      dpi        - Resolución deseada en puntos por pulgada
+ * @returns {Uint8Array}           - PNG modificado con metadatos DPI
+ */
+function injectPNGDPI(pngBuffer, dpi) {
+  // Validar firma PNG (8 bytes: 137 80 78 71 13 10 26 10)
+  const src = new Uint8Array(pngBuffer);
+  const PNG_SIG = [137,80,78,71,13,10,26,10];
+  for (let i = 0; i < 8; i++) {
+    if (src[i] !== PNG_SIG[i]) {
+      console.warn('[300DPI] Firma PNG inválida, se exporta sin metadatos DPI');
+      return src;
+    }
+  }
+
+  // 300 DPI → 11811.023... píxeles/metro → redondeado a 11811
+  const ppm = Math.round(dpi / 0.0254);   // pixels per meter
+
+  // ── Construir chunk pHYs (21 bytes totales) ──────────────────────
+  //   Offset 0-3  : longitud de datos = 9
+  //   Offset 4-7  : tipo ASCII 'pHYs' = [0x70, 0x48, 0x59, 0x73]
+  //   Offset 8-11 : X pixels per unit  (uint32 big-endian)
+  //   Offset 12-15: Y pixels per unit  (uint32 big-endian)
+  //   Offset 16   : Unit specifier = 1 (metros)
+  //   Offset 17-20: CRC32 del tipo + datos (bytes 4..16)
+  const chunk = new Uint8Array(21);
+  const view  = new DataView(chunk.buffer);
+
+  view.setUint32(0,  9,          false);  // longitud datos
+  chunk[4]  = 0x70; chunk[5]  = 0x48;    // 'p' 'H'
+  chunk[6]  = 0x59; chunk[7]  = 0x73;    // 'Y' 's'
+  view.setUint32(8,  ppm,        false);  // X ppm
+  view.setUint32(12, ppm,        false);  // Y ppm
+  chunk[16] = 1;                          // unidad = metros
+
+  const crcVal = crc32(chunk.slice(4, 17)); // CRC sobre tipo+datos
+  view.setUint32(17, crcVal, false);
+
+  // ── Insertar después del IHDR (siempre en byte 33) ───────────────
+  //   Estructura IHDR fija: 8 sig + 4 len + 4 tipo + 13 datos + 4 CRC = 33 bytes
+  const INSERT_AT = 33;
+  const result = new Uint8Array(src.length + chunk.length);
+  result.set(src.slice(0, INSERT_AT));          // PNG sig + IHDR
+  result.set(chunk, INSERT_AT);                 // ← pHYs nuevo
+  result.set(src.slice(INSERT_AT), INSERT_AT + chunk.length); // resto
+
+  return result;
+}
+
+// ─── Descarga con 300 DPI embebidos ─────────────────────────────────
+btnDownload.addEventListener('click', () => {
+  if (!originalImage) { showStatus('No hay imagen cargada', 'error'); return; }
+
+  showStatus('Generando PNG 300 DPI...', 'success');
+
+  // canvas.toBlob es asíncrono y más eficiente que toDataURL para binarios grandes
+  canvas.toBlob(blob => {
+    blob.arrayBuffer().then(buffer => {
+      // Inyectar chunk pHYs con 300 DPI
+      const pngWith300DPI = injectPNGDPI(buffer, 300);
+
+      // Crear URL temporal del Blob modificado
+      const url = URL.createObjectURL(
+        new Blob([pngWith300DPI], { type: 'image/png' })
+      );
+
+      const a = document.createElement('a');
+      a.download = `${originalFileName}_PNG_Sin Fondo Novage.png`;
+      a.href = url;
+      a.click();
+
+      // Liberar memoria del objeto URL tras la descarga
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+      showStatus(`PNG descargado · ${canvas.width}×${canvas.height}px · 300 DPI`, 'success');
+    }).catch(err => {
+      console.error('[300DPI] Error al procesar buffer:', err);
+      showStatus('Error al generar el archivo', 'error');
+    });
+  }, 'image/png');
+});
+</script>
 </body>
 </html>
