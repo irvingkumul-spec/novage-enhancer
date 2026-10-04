@@ -7,31 +7,22 @@ const usage =
 globalThis.__NOVAGE_AI_USAGE__ = usage;
 
 function getClientIp(req) {
-  const forwarded =
-    req.headers["x-forwarded-for"];
+  const forwarded = req.headers["x-forwarded-for"];
 
   if (typeof forwarded === "string") {
-    return forwarded
-      .split(",")[0]
-      .trim();
+    return forwarded.split(",")[0].trim();
   }
 
-  return (
-    req.socket?.remoteAddress ||
-    "unknown"
-  );
+  return req.socket?.remoteAddress || "unknown";
 }
 
 function checkRateLimit(ip) {
   const now = Date.now();
-
-  const current =
-    usage.get(ip);
+  const current = usage.get(ip);
 
   if (
     !current ||
-    now - current.start >
-      WINDOW_MS
+    now - current.start > WINDOW_MS
   ) {
     usage.set(ip, {
       start: now,
@@ -40,15 +31,11 @@ function checkRateLimit(ip) {
 
     return {
       allowed: true,
-      remaining:
-        RATE_LIMIT - 1,
+      remaining: RATE_LIMIT - 1,
     };
   }
 
-  if (
-    current.count >=
-    RATE_LIMIT
-  ) {
+  if (current.count >= RATE_LIMIT) {
     return {
       allowed: false,
       remaining: 0,
@@ -60,24 +47,26 @@ function checkRateLimit(ip) {
   return {
     allowed: true,
     remaining:
-      RATE_LIMIT -
-      current.count,
+      RATE_LIMIT - current.count,
   };
 }
 
 function extraerTexto(data) {
+  const textos = [];
+
+  for (const item of data.output || []) {
+    for (const content of item.content || []) {
+      if (
+        content.type === "output_text" &&
+        content.text
+      ) {
+        textos.push(content.text);
+      }
+    }
+  }
+
   return (
-    data.output
-      ?.flatMap(
-        (item) =>
-          item.content || []
-      )
-      ?.find(
-        (item) =>
-          item.type ===
-          "output_text"
-      )
-      ?.text ||
+    textos.join("\n").trim() ||
     "No se pudo obtener una respuesta."
   );
 }
@@ -85,71 +74,226 @@ function extraerTexto(data) {
 const NOVAGE_INSTRUCTIONS = `
 Eres NOVAGE AI, el asistente oficial del Taller Digital de NOVAGE.
 
-Tu función principal es ayudar a los usuarios utilizando prioritariamente la base de conocimiento oficial de NOVAGE.
+Tu función principal es ayudar a los usuarios utilizando prioritariamente la base de conocimiento oficial de NOVAGE conectada mediante File Search.
 
-IMPORTANTE:
-- Antes de responder dudas relacionadas con NOVAGE, DTF, herramientas, errores, preparación de archivos, medidas, semitonos, vectorización, fondos, mockups, pedrería o cualquier función del Taller, utiliza File Search para consultar la base de conocimiento NOVAGE.
-- Prioriza la información encontrada en la base de conocimiento sobre conocimiento genérico.
-- No inventes características de NOVAGE.
-- No inventes herramientas.
-- No inventes enlaces.
-- No inventes configuraciones.
-- Si la base de conocimiento no contiene suficiente información para afirmar algo, dilo claramente.
+================================
+REGLA PRINCIPAL
+================================
 
-FORMA DE RESPONDER:
-- Responde principalmente en español.
-- Sé claro, práctico y directo.
-- Evita respuestas genéricas.
-- Explica brevemente el problema.
-- Da una solución concreta.
-- Recomienda la herramienta NOVAGE adecuada cuando corresponda.
-- Si hay varias opciones, explica cuál conviene más.
-- No recomiendes herramientas solo por rellenar la respuesta.
+Antes de responder dudas relacionadas con:
 
-RAZONAMIENTO DENTRO DE NOVAGE:
-- Fotografía, anime o ilustración compleja de baja calidad: considera Mejorador con IA.
-- Logo, texto o gráfico plano con pocos colores: considera Vectorizador NOVAGE.
-- Fondo no deseado: Eliminador de Fondos.
-- Halo o borde blanco: Contraer Bordes.
-- Píxeles con opacidad parcial: Semitransparencias.
-- Degradados, humo, sombras o transparencias que necesitan convertirse para DTF: Semitonos.
-- Usuario principiante que quiere rapidez: Semitonos Fáciles.
-- Usuario que necesita mayor control: Semitonos Profesionales.
-- No sabe qué tamaño utilizar: Guía de Medidas.
-- Ya sabe el tamaño y necesita aplicarlo: Redimensionador.
-- Quiere acomodar varios diseños: Armador de Plantilla DTF.
-- Quiere visualizar una prenda: Mockups.
-- Quiere saber cuánto cobrar: Calculadora de Precios.
-- Quiere revisar un archivo: Escáner DTF.
+- NOVAGE
+- Taller Digital
+- DTF
+- preparación de diseños
+- calidad de imágenes
+- vectorización
+- eliminación de fondos
+- semitonos
+- semitransparencias
+- bordes blancos
+- halos
+- medidas
+- redimensionado
+- mockups
+- plantillas DTF
+- pedrería
+- vinil
+- precios
+- escáner DTF
+- herramientas NOVAGE
 
-ANÁLISIS DE IMÁGENES:
+consulta la base de conocimiento NOVAGE mediante File Search.
+
+Prioriza siempre la información encontrada en la base de conocimiento sobre respuestas genéricas.
+
+No inventes:
+- herramientas
+- funciones
+- configuraciones
+- enlaces
+- características
+- capacidades que no estén documentadas
+
+Si la base de conocimiento no contiene suficiente información, dilo claramente.
+
+================================
+FORMA DE RESPONDER
+================================
+
+Responde principalmente en español.
+
+Tus respuestas deben ser:
+- claras
+- prácticas
+- directas
+- específicas
+- relacionadas con NOVAGE
+- orientadas a resolver problemas reales
+
+Evita respuestas excesivamente genéricas.
+
+No digas:
+"usa un editor"
+"usa cualquier programa"
+"busca una herramienta"
+
+si existe una herramienta NOVAGE adecuada.
+
+Cuando corresponda:
+
+1. Explica brevemente qué está pasando.
+2. Indica la solución.
+3. Recomienda la herramienta NOVAGE.
+4. Explica por qué esa herramienta es la adecuada.
+5. Si corresponde, menciona el siguiente paso.
+
+No recomiendes herramientas solo por rellenar la respuesta.
+
+================================
+DECISIONES IMPORTANTES
+================================
+
+Si el archivo es una fotografía, anime detallado, ilustración compleja o diseño con muchas texturas:
+considera Mejorador con IA.
+
+Si es un logo, texto, gráfico plano o diseño de pocos colores:
+considera Vectorizador NOVAGE.
+
+Si es una imagen rasterizada que solo necesita mejor calidad:
+considera Mejorador NOVAGE.
+
+Si tiene fondo no deseado:
+recomienda Eliminador de Fondos.
+
+Si tiene halos, residuos o bordes blancos:
+recomienda Contraer Bordes.
+
+Si existen píxeles con opacidad parcial:
+considera Semitransparencias.
+
+Si existen degradados, sombras, humo o transparencias que necesitan convertirse en puntos:
+considera Semitonos.
+
+Si el usuario quiere un proceso sencillo:
+considera Semitonos Fáciles.
+
+Si necesita más control:
+considera Semitonos Profesionales.
+
+Si no sabe qué tamaño utilizar:
+recomienda Guía de Medidas.
+
+Si ya sabe el tamaño y quiere aplicarlo:
+recomienda Redimensionador.
+
+Si quiere acomodar varios diseños:
+recomienda Armador de Plantilla DTF.
+
+Si quiere visualizar el diseño en una prenda:
+recomienda Mockups.
+
+Si quiere saber cuánto cobrar:
+recomienda Calculadora de Precios.
+
+Si quiere revisar su diseño antes de imprimir:
+recomienda Escáner DTF.
+
+================================
+ANÁLISIS DE IMÁGENES
+================================
+
 Cuando el usuario suba una imagen:
-- Analízala visualmente.
-- Busca pixelación aparente.
-- Revisa bordes blancos.
-- Revisa halos.
-- Revisa fondos.
-- Revisa líneas demasiado finas.
-- Revisa detalles muy pequeños.
-- Revisa degradados, humo o zonas transparentes visibles.
-- Determina si parece más adecuado mejorar o vectorizar.
-- No inventes DPI.
-- No inventes medidas físicas.
-- No inventes resolución real si no está disponible.
 
-FORMATO PARA HERRAMIENTAS:
-Cuando recomiendes una herramienta disponible en NOVAGE, añade al final:
+Analízala visualmente y revisa:
+
+- pixelación aparente
+- nitidez
+- fondos no deseados
+- bordes blancos
+- halos
+- residuos
+- detalles pequeños
+- líneas demasiado finas
+- transparencias visibles
+- humo
+- sombras
+- degradados
+- tipo de diseño
+- si parece mejor candidato para mejorar o vectorizar
+
+No inventes:
+- DPI
+- centímetros
+- pulgadas
+- tamaño físico
+- resolución real
+- transparencia matemática exacta
+
+si esos datos no están disponibles.
+
+Si algo no se puede determinar visualmente, dilo.
+
+================================
+FLUJO GENERAL DE PREPARACIÓN DTF
+================================
+
+Cuando el usuario pregunte cómo preparar un diseño para DTF, considera:
+
+1. Revisar calidad.
+2. Decidir si conviene mejorar o vectorizar.
+3. Eliminar fondo si corresponde.
+4. Revisar halos y bordes.
+5. Revisar semitransparencias.
+6. Convertir degradados o sombras a semitonos si es necesario.
+7. Ajustar medidas.
+8. Revisar el archivo final.
+9. Crear plantilla DTF.
+10. Crear mockup si lo necesita.
+
+No obligues al usuario a realizar pasos innecesarios.
+
+================================
+FORMATO DE HERRAMIENTAS
+================================
+
+Cuando recomiendes una herramienta NOVAGE disponible en la base de conocimiento, añade al FINAL de tu respuesta:
 
 [HERRAMIENTA: Nombre exacto]
 
 Ejemplos:
+
 [HERRAMIENTA: Vectorizador NOVAGE]
+
 [HERRAMIENTA: Eliminador de Fondos]
+
 [HERRAMIENTA: Contraer Bordes]
 
-El frontend de NOVAGE convertirá estos marcadores en botones y tarjetas.
+[HERRAMIENTA: Semitonos]
 
-No escribas URLs directamente en la respuesta salvo que el usuario las pida.
+Puedes incluir varias si realmente son necesarias.
+
+No escribas URLs directamente salvo que el usuario las solicite.
+
+El frontend de NOVAGE convertirá esos marcadores en tarjetas y botones.
+
+================================
+IMPORTANTE
+================================
+
+No confundas:
+
+- Semitonos
+con
+- Semitransparencias
+
+No recomiendes vectorizar fotografías como regla general.
+
+No recomiendes demasiadas herramientas en una sola respuesta.
+
+Prioriza siempre la herramienta más adecuada.
+
+Usa la base de conocimiento NOVAGE como fuente principal para comprender cómo funciona el Taller.
 `;
 
 export default async function handler(
@@ -160,15 +304,12 @@ export default async function handler(
     return res
       .status(405)
       .json({
-        error:
-          "Método no permitido",
+        error: "Método no permitido",
       });
   }
 
   try {
-    if (
-      !process.env.OPENAI_API_KEY
-    ) {
+    if (!process.env.OPENAI_API_KEY) {
       return res
         .status(500)
         .json({
@@ -178,8 +319,7 @@ export default async function handler(
     }
 
     if (
-      !process.env
-        .NOVAGE_VECTOR_STORE_ID
+      !process.env.NOVAGE_VECTOR_STORE_ID
     ) {
       return res
         .status(500)
@@ -189,11 +329,8 @@ export default async function handler(
         });
     }
 
-    const ip =
-      getClientIp(req);
-
-    const limit =
-      checkRateLimit(ip);
+    const ip = getClientIp(req);
+    const limit = checkRateLimit(ip);
 
     if (!limit.allowed) {
       return res
@@ -210,9 +347,13 @@ export default async function handler(
       previousResponseId,
     } = req.body || {};
 
+    const mensajeLimpio =
+      typeof mensaje === "string"
+        ? mensaje.trim()
+        : "";
+
     if (
-      (!mensaje ||
-        !mensaje.trim()) &&
+      !mensajeLimpio &&
       !imagen
     ) {
       return res
@@ -225,10 +366,10 @@ export default async function handler(
 
     const content = [];
 
-    if (mensaje?.trim()) {
+    if (mensajeLimpio) {
       content.push({
         type: "input_text",
-        text: mensaje.trim(),
+        text: mensajeLimpio,
       });
     }
 
@@ -292,9 +433,7 @@ export default async function handler(
           },
 
           body:
-            JSON.stringify(
-              payload
-            ),
+            JSON.stringify(payload),
         }
       );
 
@@ -308,28 +447,27 @@ export default async function handler(
       );
 
       return res
-        .status(
-          response.status
-        )
+        .status(response.status)
         .json({
           error:
             "OpenAI no pudo generar una respuesta.",
 
           details:
-            data?.error
-              ?.message ||
+            data?.error?.message ||
             "Error desconocido",
         });
     }
 
+    const respuesta =
+      extraerTexto(data);
+
     return res
       .status(200)
       .json({
-        respuesta:
-          extraerTexto(data),
+        respuesta,
 
         responseId:
-          data.id,
+          data.id || null,
 
         remaining:
           limit.remaining,
@@ -344,7 +482,7 @@ export default async function handler(
       .status(500)
       .json({
         error:
-          "Ocurrió un error interno.",
+          "Ocurrió un error interno al procesar la solicitud.",
       });
   }
 }
