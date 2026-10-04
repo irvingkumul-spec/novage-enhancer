@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>NOVAGE AI</title>
 
@@ -16,40 +20,55 @@
       margin: 0;
       width: 100%;
       min-height: 100%;
-      font-family: Inter, Arial, Helvetica, sans-serif;
+      font-family:
+        Inter,
+        Arial,
+        Helvetica,
+        sans-serif;
+
       background: #0b0b0b;
-      color: #ffffff;
+      color: white;
     }
 
     body {
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      padding: 28px 16px;
+      padding: 20px;
+    }
+
+    button,
+    textarea {
+      font: inherit;
     }
 
     .app {
       width: 100%;
-      max-width: 950px;
-      height: calc(100vh - 56px);
-      min-height: 600px;
+      max-width: 1000px;
+      height: calc(100vh - 40px);
+
       display: flex;
       flex-direction: column;
+
       background: #111111;
+
       border: 1px solid #292929;
-      border-radius: 22px;
+      border-radius: 24px;
+
       overflow: hidden;
-      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
     }
 
     .header {
-      padding: 20px 22px;
-      border-bottom: 1px solid #292929;
+      padding: 18px 20px;
+
+      border-bottom:
+        1px solid #292929;
+
       display: flex;
       align-items: center;
       justify-content: space-between;
+
       gap: 20px;
-      background: rgba(17, 17, 17, 0.96);
     }
 
     .brand {
@@ -59,123 +78,150 @@
     }
 
     .logo {
-      width: 42px;
-      height: 42px;
-      border-radius: 13px;
-      background: #e3fc02;
-      color: #0a0a0a;
+      width: 44px;
+      height: 44px;
+
+      border-radius: 14px;
+
       display: flex;
       align-items: center;
       justify-content: center;
+
+      background: #e3fc02;
+      color: #090909;
+
+      font-size: 20px;
       font-weight: 900;
-      font-size: 19px;
     }
 
-    .brand-text h1 {
+    .brand h1 {
       margin: 0;
       font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.3px;
     }
 
-    .brand-text p {
-      margin: 4px 0 0;
-      font-size: 12px;
+    .brand p {
+      margin: 3px 0 0;
+
       color: #929292;
+      font-size: 12px;
     }
 
-    .status {
+    .header-actions {
       display: flex;
       align-items: center;
-      gap: 7px;
-      color: #ababab;
-      font-size: 12px;
+      gap: 8px;
     }
 
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #e3fc02;
-      box-shadow: 0 0 10px rgba(227, 252, 2, 0.45);
+    .small-button {
+      border: 1px solid #333;
+
+      background: #171717;
+      color: #ddd;
+
+      padding: 9px 12px;
+
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .small-button:hover {
+      border-color: #e3fc02;
     }
 
     .chat {
       flex: 1;
+
       overflow-y: auto;
-      padding: 26px;
-      scroll-behavior: smooth;
+
+      padding: 24px;
     }
 
     .welcome {
       min-height: 100%;
+
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
     }
 
     .welcome-inner {
       width: 100%;
-      max-width: 650px;
+      max-width: 680px;
+
       text-align: center;
     }
 
     .welcome-icon {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 20px;
+      width: 70px;
+      height: 70px;
+
+      margin: 0 auto 18px;
+
       border-radius: 22px;
+
       display: flex;
-      align-items: center;
       justify-content: center;
+      align-items: center;
+
       background: #e3fc02;
-      color: #080808;
+      color: #090909;
+
       font-size: 30px;
       font-weight: 900;
     }
 
     .welcome h2 {
       margin: 0;
-      font-size: clamp(25px, 4vw, 38px);
-      letter-spacing: -1.2px;
+
+      font-size: 34px;
+      letter-spacing: -1px;
     }
 
     .welcome p {
-      margin: 13px auto 24px;
-      max-width: 540px;
-      color: #999999;
+      margin: 12px auto 22px;
+
+      max-width: 560px;
+
+      color: #999;
+
       font-size: 14px;
       line-height: 1.6;
     }
 
     .suggestions {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
       gap: 10px;
     }
 
     .suggestion {
-      border: 1px solid #303030;
+      border:
+        1px solid #303030;
+
       background: #171717;
-      color: #d6d6d6;
+      color: #ddd;
+
       padding: 14px;
+
       border-radius: 13px;
+
       cursor: pointer;
       text-align: left;
-      font-size: 13px;
-      transition: 0.2s ease;
     }
 
     .suggestion:hover {
       border-color: #e3fc02;
-      color: #ffffff;
-      transform: translateY(-1px);
     }
 
     .message-row {
       width: 100%;
+
       display: flex;
-      margin-bottom: 18px;
+
+      margin-bottom: 16px;
     }
 
     .message-row.user {
@@ -187,134 +233,241 @@
     }
 
     .message {
-      max-width: min(75%, 680px);
+      max-width: 75%;
+
       padding: 13px 16px;
+
       border-radius: 17px;
-      font-size: 14px;
+
       line-height: 1.6;
+      font-size: 14px;
+
       white-space: pre-wrap;
-      word-wrap: break-word;
+      word-break: break-word;
     }
 
     .message.user {
       background: #e3fc02;
       color: #090909;
+
       border-bottom-right-radius: 5px;
-      font-weight: 500;
     }
 
     .message.ai {
       background: #1b1b1b;
-      color: #ededed;
+      color: #eee;
+
       border: 1px solid #2b2b2b;
+
       border-bottom-left-radius: 5px;
+    }
+
+    .message-image {
+      max-width: 260px;
+
+      display: block;
+
+      margin-bottom: 10px;
+
+      border-radius: 12px;
+    }
+
+    .tool-links {
+      margin-top: 12px;
+
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tool-link {
+      text-decoration: none;
+
+      background: #252525;
+      color: #fff;
+
+      border: 1px solid #3b3b3b;
+
+      padding: 8px 11px;
+
+      border-radius: 9px;
+
+      font-size: 12px;
+    }
+
+    .tool-link:hover {
+      border-color: #e3fc02;
+      color: #e3fc02;
+    }
+
+    .composer-area {
+      padding: 14px;
+
+      border-top:
+        1px solid #292929;
+
+      background: #111;
+    }
+
+    .image-preview {
+      display: none;
+
+      position: relative;
+
+      width: fit-content;
+
+      margin-bottom: 10px;
+    }
+
+    .image-preview img {
+      width: 90px;
+      height: 90px;
+
+      object-fit: cover;
+
+      border-radius: 12px;
+
+      border:
+        1px solid #333;
+    }
+
+    .remove-image {
+      position: absolute;
+
+      right: -7px;
+      top: -7px;
+
+      width: 24px;
+      height: 24px;
+
+      border: 0;
+      border-radius: 50%;
+
+      background: #e3fc02;
+      color: #000;
+
+      font-weight: bold;
+
+      cursor: pointer;
+    }
+
+    .composer {
+      display: flex;
+      align-items: flex-end;
+
+      gap: 8px;
+
+      padding: 8px;
+
+      background: #191919;
+
+      border:
+        1px solid #303030;
+
+      border-radius: 17px;
+    }
+
+    textarea {
+      flex: 1;
+
+      min-height: 46px;
+      max-height: 150px;
+
+      resize: none;
+
+      background: transparent;
+      color: white;
+
+      border: 0;
+      outline: 0;
+
+      padding: 12px 8px;
+    }
+
+    .icon-button,
+    .send {
+      width: 46px;
+      height: 46px;
+
+      flex-shrink: 0;
+
+      border: 0;
+      border-radius: 13px;
+
+      cursor: pointer;
+    }
+
+    .icon-button {
+      background: #292929;
+      color: #ddd;
+
+      font-size: 20px;
+    }
+
+    .icon-button:hover {
+      background: #333;
+    }
+
+    .send {
+      background: #e3fc02;
+      color: #090909;
+
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    .send:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .footer-text {
+      text-align: center;
+
+      color: #666;
+
+      font-size: 10px;
+
+      padding-top: 8px;
     }
 
     .typing {
       display: flex;
       gap: 5px;
-      align-items: center;
-      height: 22px;
     }
 
     .typing span {
       width: 6px;
       height: 6px;
+
       border-radius: 50%;
+
       background: #e3fc02;
-      animation: bounce 1.2s infinite ease-in-out;
+
+      animation:
+        bounce 1.1s infinite;
     }
 
     .typing span:nth-child(2) {
-      animation-delay: 0.15s;
+      animation-delay: .15s;
     }
 
     .typing span:nth-child(3) {
-      animation-delay: 0.3s;
+      animation-delay: .3s;
     }
 
     @keyframes bounce {
-      0%, 80%, 100% {
+      0%,
+      80%,
+      100% {
+        opacity: .3;
         transform: translateY(0);
-        opacity: 0.35;
       }
 
       40% {
-        transform: translateY(-5px);
         opacity: 1;
+        transform: translateY(-4px);
       }
-    }
-
-    .composer-area {
-      padding: 15px;
-      border-top: 1px solid #292929;
-      background: #111111;
-    }
-
-    .composer {
-      width: 100%;
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      padding: 8px;
-      background: #191919;
-      border: 1px solid #303030;
-      border-radius: 17px;
-      transition: border-color 0.2s ease;
-    }
-
-    .composer:focus-within {
-      border-color: #626d03;
-    }
-
-    textarea {
-      flex: 1;
-      min-height: 46px;
-      max-height: 150px;
-      resize: none;
-      border: 0;
-      outline: 0;
-      background: transparent;
-      color: white;
-      padding: 12px 10px;
-      font-family: inherit;
-      font-size: 14px;
-      line-height: 1.45;
-    }
-
-    textarea::placeholder {
-      color: #717171;
-    }
-
-    .send {
-      width: 46px;
-      height: 46px;
-      flex-shrink: 0;
-      border: 0;
-      border-radius: 13px;
-      background: #e3fc02;
-      color: #080808;
-      cursor: pointer;
-      font-size: 20px;
-      font-weight: 900;
-      transition: 0.15s ease;
-    }
-
-    .send:hover {
-      transform: scale(1.04);
-    }
-
-    .send:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .footer-text {
-      text-align: center;
-      color: #646464;
-      font-size: 10px;
-      padding-top: 8px;
     }
 
     @media (max-width: 700px) {
@@ -324,21 +477,13 @@
 
       .app {
         height: 100vh;
-        min-height: 100vh;
-        border: 0;
+
         border-radius: 0;
-      }
-
-      .header {
-        padding: 15px;
-      }
-
-      .status {
-        display: none;
+        border: 0;
       }
 
       .chat {
-        padding: 18px 14px;
+        padding: 16px 12px;
       }
 
       .suggestions {
@@ -349,8 +494,17 @@
         max-width: 88%;
       }
 
-      .composer-area {
-        padding: 10px;
+      .header {
+        padding: 14px;
+      }
+
+      .header-actions {
+        gap: 5px;
+      }
+
+      .small-button {
+        padding: 8px;
+        font-size: 11px;
       }
     }
   </style>
@@ -358,287 +512,796 @@
 
 <body>
 
-  <main class="app">
+<main class="app">
 
-    <header class="header">
-      <div class="brand">
-        <div class="logo">N</div>
+  <header class="header">
 
-        <div class="brand-text">
-          <h1>NOVAGE AI</h1>
-          <p>Asistente especializado en DTF</p>
-        </div>
+    <div class="brand">
+
+      <div class="logo">
+        N
       </div>
 
-      <div class="status">
-        <span class="status-dot"></span>
-        Disponible
-      </div>
-    </header>
+      <div>
+        <h1>NOVAGE AI</h1>
 
-    <section class="chat" id="chat">
-
-      <div class="welcome" id="welcome">
-
-        <div class="welcome-inner">
-
-          <div class="welcome-icon">✦</div>
-
-          <h2>¿En qué puedo ayudarte?</h2>
-
-          <p>
-            Pregúntame sobre DTF, preparación de diseños,
-            semitonos, vectorización, calidad de imágenes
-            y herramientas de NOVAGE.
-          </p>
-
-          <div class="suggestions">
-
-            <button
-              class="suggestion"
-              data-message="¿Cómo sé si mi diseño tiene suficiente calidad para imprimir en DTF?"
-            >
-              ¿Mi diseño tiene buena calidad para DTF?
-            </button>
-
-            <button
-              class="suggestion"
-              data-message="¿Cuándo debería vectorizar un diseño?"
-            >
-              ¿Cuándo debería vectorizar?
-            </button>
-
-            <button
-              class="suggestion"
-              data-message="¿Cuándo conviene utilizar semitonos en un diseño DTF?"
-            >
-              ¿Cuándo utilizar semitonos?
-            </button>
-
-            <button
-              class="suggestion"
-              data-message="¿Qué debo revisar antes de mandar un diseño a imprimir en DTF?"
-            >
-              Preparar un diseño para impresión
-            </button>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </section>
-
-    <div class="composer-area">
-
-      <div class="composer">
-
-        <textarea
-          id="input"
-          rows="1"
-          placeholder="Pregúntale algo a NOVAGE AI..."
-        ></textarea>
-
-        <button
-          class="send"
-          id="send"
-          aria-label="Enviar mensaje"
-        >
-          ↑
-        </button>
-
-      </div>
-
-      <div class="footer-text">
-        NOVAGE AI puede cometer errores. Verifica información importante.
+        <p>
+          Asistente especializado en DTF
+        </p>
       </div>
 
     </div>
 
-  </main>
+    <div class="header-actions">
 
-  <script>
-    const chat = document.getElementById("chat");
-    const input = document.getElementById("input");
-    const sendButton = document.getElementById("send");
-    const welcome = document.getElementById("welcome");
+      <button
+        class="small-button"
+        id="newChat"
+      >
+        Nueva conversación
+      </button>
 
-    let enviando = false;
+    </div>
 
-    function escapeHTML(text) {
-      const div = document.createElement("div");
-      div.textContent = text;
-      return div.innerHTML;
-    }
+  </header>
 
-    function ocultarBienvenida() {
-      if (welcome) {
-        welcome.remove();
-      }
-    }
+  <section
+    class="chat"
+    id="chat"
+  >
 
-    function agregarMensaje(tipo, texto) {
-      ocultarBienvenida();
+    <div
+      class="welcome"
+      id="welcome"
+    >
 
-      const row = document.createElement("div");
-      row.className = `message-row ${tipo}`;
+      <div class="welcome-inner">
 
-      const bubble = document.createElement("div");
-      bubble.className = `message ${tipo}`;
-
-      if (tipo === "ai") {
-        bubble.innerHTML = formatearRespuesta(texto);
-      } else {
-        bubble.textContent = texto;
-      }
-
-      row.appendChild(bubble);
-      chat.appendChild(row);
-
-      chat.scrollTop = chat.scrollHeight;
-
-      return row;
-    }
-
-    function formatearRespuesta(texto) {
-      let seguro = escapeHTML(texto);
-
-      seguro = seguro.replace(
-        /\*\*(.*?)\*\*/g,
-        "<strong>$1</strong>"
-      );
-
-      seguro = seguro.replace(/\n/g, "<br>");
-
-      return seguro;
-    }
-
-    function agregarTyping() {
-      ocultarBienvenida();
-
-      const row = document.createElement("div");
-      row.className = "message-row ai";
-      row.id = "typing";
-
-      row.innerHTML = `
-        <div class="message ai">
-          <div class="typing">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+        <div class="welcome-icon">
+          ✦
         </div>
-      `;
 
-      chat.appendChild(row);
-      chat.scrollTop = chat.scrollHeight;
+        <h2>
+          ¿En qué puedo ayudarte?
+        </h2>
+
+        <p>
+          Pregunta sobre DTF o sube tu
+          diseño para analizarlo.
+        </p>
+
+        <div class="suggestions">
+
+          <button
+            class="suggestion"
+            data-message=
+            "Analiza cómo preparar un diseño para DTF."
+          >
+            Preparar diseño para DTF
+          </button>
+
+          <button
+            class="suggestion"
+            data-message=
+            "¿Cuándo debería vectorizar mi diseño?"
+          >
+            ¿Cuándo vectorizar?
+          </button>
+
+          <button
+            class="suggestion"
+            data-message=
+            "¿Cuándo debería usar semitonos?"
+          >
+            ¿Cuándo usar semitonos?
+          </button>
+
+          <button
+            class="suggestion"
+            data-message=
+            "¿Cómo puedo mejorar la calidad de mi diseño?"
+          >
+            Mejorar calidad
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+  <div class="composer-area">
+
+    <div
+      class="image-preview"
+      id="imagePreview"
+    >
+
+      <img
+        id="previewImg"
+        alt="Vista previa"
+      >
+
+      <button
+        class="remove-image"
+        id="removeImage"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div class="composer">
+
+      <input
+        type="file"
+        id="imageInput"
+        accept=
+          "image/png,image/jpeg,image/webp"
+        hidden
+      >
+
+      <button
+        class="icon-button"
+        id="attachButton"
+        title="Subir diseño"
+      >
+        +
+      </button>
+
+      <textarea
+        id="input"
+        rows="1"
+        placeholder=
+          "Pregúntale algo a NOVAGE AI..."
+      ></textarea>
+
+      <button
+        class="send"
+        id="send"
+      >
+        ↑
+      </button>
+
+    </div>
+
+    <div class="footer-text">
+      NOVAGE AI puede cometer errores.
+      Verifica información importante.
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+
+  const chat =
+    document.getElementById("chat");
+
+  const input =
+    document.getElementById("input");
+
+  const sendButton =
+    document.getElementById("send");
+
+  const imageInput =
+    document.getElementById("imageInput");
+
+  const attachButton =
+    document.getElementById("attachButton");
+
+  const imagePreview =
+    document.getElementById("imagePreview");
+
+  const previewImg =
+    document.getElementById("previewImg");
+
+  const removeImage =
+    document.getElementById("removeImage");
+
+  const newChat =
+    document.getElementById("newChat");
+
+  let previousResponseId =
+    sessionStorage.getItem(
+      "novage_previous_response"
+    ) || null;
+
+  let selectedImage = null;
+
+  let enviando = false;
+
+  const TOOL_URLS = {
+    "mejorador":
+      "https://tools.novage.store/enhancer",
+
+    "eliminador":
+      "https://tools.novage.store/removebg",
+
+    "vectorizador":
+      "https://tools.novage.store/vectorizador",
+
+    "semitonos":
+      "https://tools.novage.store/dtf",
+
+    "mockups":
+      "https://tools.novage.store/template-tool"
+  };
+
+  function esconderWelcome() {
+    document
+      .getElementById("welcome")
+      ?.remove();
+  }
+
+  function escapeHTML(text) {
+    const div =
+      document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+  }
+
+  function detectarHerramientas(texto) {
+    const lower =
+      texto.toLowerCase();
+
+    const herramientas = [];
+
+    if (
+      lower.includes("mejorador") ||
+      lower.includes("mejorar la calidad")
+    ) {
+      herramientas.push([
+        "Abrir Mejorador",
+        TOOL_URLS.mejorador
+      ]);
     }
 
-    function quitarTyping() {
-      document.getElementById("typing")?.remove();
+    if (
+      lower.includes("eliminar fondo") ||
+      lower.includes("eliminador")
+    ) {
+      herramientas.push([
+        "Abrir Eliminador",
+        TOOL_URLS.eliminador
+      ]);
     }
 
-    async function enviarMensaje(mensajeManual = null) {
-      if (enviando) return;
+    if (
+      lower.includes("vectoriz")
+    ) {
+      herramientas.push([
+        "Abrir Vectorizador",
+        TOOL_URLS.vectorizador
+      ]);
+    }
 
-      const mensaje = (
-        mensajeManual !== null
-          ? mensajeManual
-          : input.value
-      ).trim();
+    if (
+      lower.includes("semitono")
+    ) {
+      herramientas.push([
+        "Abrir Semitonos",
+        TOOL_URLS.semitonos
+      ]);
+    }
 
-      if (!mensaje) return;
+    if (
+      lower.includes("mockup")
+    ) {
+      herramientas.push([
+        "Abrir Mockups",
+        TOOL_URLS.mockups
+      ]);
+    }
 
-      enviando = true;
-      sendButton.disabled = true;
+    return herramientas;
+  }
 
-      agregarMensaje("user", mensaje);
+  function agregarMensaje(
+    tipo,
+    texto,
+    imagen = null
+  ) {
+    esconderWelcome();
 
-      input.value = "";
-      ajustarTextarea();
+    const row =
+      document.createElement("div");
 
-      agregarTyping();
+    row.className =
+      `message-row ${tipo}`;
 
-      try {
-        const response = await fetch("/api/novage-ai", {
-          method: "POST",
+    const bubble =
+      document.createElement("div");
 
-          headers: {
-            "Content-Type": "application/json"
-          },
+    bubble.className =
+      `message ${tipo}`;
 
-          body: JSON.stringify({
-            mensaje
-          })
-        });
+    if (imagen) {
+      const img =
+        document.createElement("img");
 
-        const data = await response.json();
+      img.src = imagen;
 
-        quitarTyping();
+      img.className =
+        "message-image";
 
-        if (!response.ok) {
-          throw new Error(
-            data.details ||
-            data.error ||
-            "No se pudo obtener una respuesta."
-          );
-        }
+      bubble.appendChild(img);
+    }
 
-        agregarMensaje(
-          "ai",
-          data.respuesta || "No pude generar una respuesta."
+    const textoDiv =
+      document.createElement("div");
+
+    textoDiv.innerHTML =
+      escapeHTML(texto)
+        .replace(
+          /\*\*(.*?)\*\*/g,
+          "<strong>$1</strong>"
+        )
+        .replace(
+          /\n/g,
+          "<br>"
         );
 
-      } catch (error) {
-        quitarTyping();
+    bubble.appendChild(textoDiv);
 
-        agregarMensaje(
-          "ai",
-          "Ocurrió un error al conectar con NOVAGE AI. Intenta nuevamente."
+    if (tipo === "ai") {
+
+      const tools =
+        detectarHerramientas(texto);
+
+      if (tools.length) {
+
+        const toolContainer =
+          document.createElement("div");
+
+        toolContainer.className =
+          "tool-links";
+
+        tools.forEach(
+          ([label, url]) => {
+
+            const link =
+              document.createElement("a");
+
+            link.href = url;
+
+            link.target = "_blank";
+
+            link.rel =
+              "noopener noreferrer";
+
+            link.className =
+              "tool-link";
+
+            link.textContent =
+              label;
+
+            toolContainer
+              .appendChild(link);
+          }
         );
 
-        console.error(error);
-
-      } finally {
-        enviando = false;
-        sendButton.disabled = false;
-        input.focus();
+        bubble.appendChild(
+          toolContainer
+        );
       }
     }
 
-    function ajustarTextarea() {
-      input.style.height = "auto";
+    row.appendChild(bubble);
 
-      input.style.height =
-        Math.min(input.scrollHeight, 150) + "px";
-    }
+    chat.appendChild(row);
 
-    input.addEventListener("input", ajustarTextarea);
+    chat.scrollTop =
+      chat.scrollHeight;
+  }
 
-    input.addEventListener("keydown", (event) => {
-      if (
-        event.key === "Enter" &&
-        !event.shiftKey
-      ) {
-        event.preventDefault();
-        enviarMensaje();
-      }
-    });
+  function agregarTyping() {
 
-    sendButton.addEventListener("click", () => {
-      enviarMensaje();
-    });
+    esconderWelcome();
+
+    const row =
+      document.createElement("div");
+
+    row.className =
+      "message-row ai";
+
+    row.id = "typing";
+
+    row.innerHTML = `
+      <div class="message ai">
+        <div class="typing">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    `;
+
+    chat.appendChild(row);
+
+    chat.scrollTop =
+      chat.scrollHeight;
+  }
+
+  function quitarTyping() {
 
     document
-      .querySelectorAll(".suggestion")
-      .forEach((button) => {
-        button.addEventListener("click", () => {
-          enviarMensaje(button.dataset.message);
-        });
-      });
+      .getElementById("typing")
+      ?.remove();
+  }
 
-  </script>
+  function limpiarImagen() {
+
+    selectedImage = null;
+
+    imageInput.value = "";
+
+    imagePreview.style.display =
+      "none";
+
+    previewImg.src = "";
+  }
+
+  function comprimirImagen(file) {
+    return new Promise(
+      (resolve, reject) => {
+
+        const reader =
+          new FileReader();
+
+        reader.onload = () => {
+
+          const img =
+            new Image();
+
+          img.onload = () => {
+
+            const MAX =
+              1800;
+
+            let width =
+              img.width;
+
+            let height =
+              img.height;
+
+            if (
+              width > MAX ||
+              height > MAX
+            ) {
+              const ratio =
+                Math.min(
+                  MAX / width,
+                  MAX / height
+                );
+
+              width =
+                Math.round(
+                  width * ratio
+                );
+
+              height =
+                Math.round(
+                  height * ratio
+                );
+            }
+
+            const canvas =
+              document.createElement(
+                "canvas"
+              );
+
+            canvas.width =
+              width;
+
+            canvas.height =
+              height;
+
+            const ctx =
+              canvas.getContext("2d");
+
+            ctx.drawImage(
+              img,
+              0,
+              0,
+              width,
+              height
+            );
+
+            const data =
+              canvas.toDataURL(
+                "image/jpeg",
+                0.86
+              );
+
+            resolve(data);
+          };
+
+          img.onerror = reject;
+
+          img.src =
+            reader.result;
+        };
+
+        reader.onerror = reject;
+
+        reader
+          .readAsDataURL(file);
+      }
+    );
+  }
+
+  async function cargarImagen(file) {
+
+    if (!file) return;
+
+    if (
+      ![
+        "image/png",
+        "image/jpeg",
+        "image/webp"
+      ].includes(file.type)
+    ) {
+      alert(
+        "Sube una imagen PNG, JPG o WEBP."
+      );
+
+      return;
+    }
+
+    if (
+      file.size >
+      15 * 1024 * 1024
+    ) {
+      alert(
+        "La imagen es demasiado grande. Máximo 15 MB."
+      );
+
+      return;
+    }
+
+    try {
+      selectedImage =
+        await comprimirImagen(file);
+
+      previewImg.src =
+        selectedImage;
+
+      imagePreview.style.display =
+        "block";
+
+    } catch {
+      alert(
+        "No se pudo cargar la imagen."
+      );
+    }
+  }
+
+  async function enviarMensaje(
+    mensajeManual = null
+  ) {
+
+    if (enviando) return;
+
+    const mensaje =
+      (
+        mensajeManual ??
+        input.value
+      ).trim();
+
+    if (
+      !mensaje &&
+      !selectedImage
+    ) {
+      return;
+    }
+
+    const imagenActual =
+      selectedImage;
+
+    enviando = true;
+
+    sendButton.disabled = true;
+
+    agregarMensaje(
+      "user",
+      mensaje ||
+        "Analiza este diseño para DTF.",
+      imagenActual
+    );
+
+    input.value = "";
+
+    ajustarTextarea();
+
+    limpiarImagen();
+
+    agregarTyping();
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/novage-ai",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body: JSON.stringify({
+              mensaje:
+                mensaje ||
+                "Analiza este diseño para DTF.",
+
+              imagen:
+                imagenActual,
+
+              previousResponseId:
+                previousResponseId
+            })
+          }
+        );
+
+      const data =
+        await response.json();
+
+      quitarTyping();
+
+      if (!response.ok) {
+        throw new Error(
+          data.details ||
+          data.error ||
+          "Error"
+        );
+      }
+
+      if (data.responseId) {
+
+        previousResponseId =
+          data.responseId;
+
+        sessionStorage.setItem(
+          "novage_previous_response",
+          previousResponseId
+        );
+      }
+
+      agregarMensaje(
+        "ai",
+        data.respuesta
+      );
+
+    } catch (error) {
+
+      quitarTyping();
+
+      agregarMensaje(
+        "ai",
+        error.message ||
+        "Ocurrió un error."
+      );
+
+    } finally {
+
+      enviando = false;
+
+      sendButton.disabled = false;
+
+      input.focus();
+    }
+  }
+
+  function ajustarTextarea() {
+
+    input.style.height =
+      "auto";
+
+    input.style.height =
+      Math.min(
+        input.scrollHeight,
+        150
+      ) + "px";
+  }
+
+  attachButton
+    .addEventListener(
+      "click",
+      () => {
+        imageInput.click();
+      }
+    );
+
+  imageInput
+    .addEventListener(
+      "change",
+      (event) => {
+        cargarImagen(
+          event.target.files[0]
+        );
+      }
+    );
+
+  removeImage
+    .addEventListener(
+      "click",
+      limpiarImagen
+    );
+
+  sendButton
+    .addEventListener(
+      "click",
+      () => {
+        enviarMensaje();
+      }
+    );
+
+  input
+    .addEventListener(
+      "input",
+      ajustarTextarea
+    );
+
+  input
+    .addEventListener(
+      "keydown",
+      (event) => {
+
+        if (
+          event.key === "Enter" &&
+          !event.shiftKey
+        ) {
+          event.preventDefault();
+
+          enviarMensaje();
+        }
+      }
+    );
+
+  document
+    .querySelectorAll(
+      ".suggestion"
+    )
+    .forEach(
+      (button) => {
+
+        button
+          .addEventListener(
+            "click",
+            () => {
+
+              enviarMensaje(
+                button.dataset.message
+              );
+            }
+          );
+      }
+    );
+
+  newChat
+    .addEventListener(
+      "click",
+      () => {
+
+        previousResponseId =
+          null;
+
+        sessionStorage.removeItem(
+          "novage_previous_response"
+        );
+
+        window.location.reload();
+      }
+    );
+
+</script>
 
 </body>
 </html>
