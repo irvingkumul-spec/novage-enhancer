@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NOVAGE AI</title>
+  <title>Luna • NOVAGE AI</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -14,115 +14,295 @@
       background: #0b0b0b;
       color: #fff;
     }
-    body { min-height: 100vh; display: flex; justify-content: center; padding: 18px; }
-    button, textarea { font: inherit; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 18px;
+    }
+    button, textarea, input { font: inherit; }
     .app {
-      width: 100%; max-width: 1050px; height: calc(100vh - 36px);
-      display: flex; flex-direction: column; overflow: hidden;
-      background: #111; border: 1px solid #292929; border-radius: 24px;
+      width: 100%;
+      max-width: 1080px;
+      height: calc(100vh - 36px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #111;
+      border: 1px solid #292929;
+      border-radius: 24px;
       box-shadow: 0 25px 90px rgba(0,0,0,.45);
     }
     .header {
-      padding: 18px 20px; border-bottom: 1px solid #292929;
-      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 16px 20px;
+      border-bottom: 1px solid #292929;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
     }
-    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .logo {
-      width: 44px; height: 44px; border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      background: #e3fc02; color: #090909; font-size: 20px; font-weight: 900;
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e3fc02;
+      color: #090909;
+      font-size: 20px;
+      font-weight: 900;
     }
-    .brand h1 { margin: 0; font-size: 18px; font-weight: 800; }
-    .brand p { margin: 4px 0 0; color: #929292; font-size: 12px; }
+    .brand-copy { min-width: 0; }
+    .brand-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .brand h1 { margin: 0; font-size: 18px; font-weight: 850; letter-spacing: -.25px; }
+    .pro-badge {
+      padding: 4px 7px;
+      border: 1px solid #4a5200;
+      border-radius: 999px;
+      color: #dff700;
+      background: #171900;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .55px;
+      text-transform: uppercase;
+    }
+    .brand p { margin: 4px 0 0; color: #8d8d8d; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .small-button {
-      border: 1px solid #343434; background: #171717; color: #ddd;
-      padding: 9px 12px; border-radius: 10px; cursor: pointer; transition: .2s ease;
+      border: 1px solid #343434;
+      background: #171717;
+      color: #ddd;
+      padding: 9px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: .2s ease;
+      flex-shrink: 0;
     }
     .small-button:hover { border-color: #e3fc02; color: #fff; }
-    .chat { flex: 1; overflow-y: auto; padding: 24px; scroll-behavior: smooth; }
-    .welcome { min-height: 100%; display: flex; align-items: center; justify-content: center; }
-    .welcome-inner { width: 100%; max-width: 690px; text-align: center; }
-    .welcome-icon {
-      width: 70px; height: 70px; margin: 0 auto 18px; border-radius: 22px;
-      display: flex; align-items: center; justify-content: center;
-      background: #e3fc02; color: #090909; font-size: 30px; font-weight: 900;
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      scroll-behavior: smooth;
     }
-    .welcome h2 { margin: 0; font-size: clamp(28px,4vw,38px); letter-spacing: -1px; }
-    .welcome p { margin: 12px auto 22px; max-width: 590px; color: #999; font-size: 14px; line-height: 1.6; }
+    .welcome {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .welcome-inner { width: 100%; max-width: 720px; text-align: center; }
+    .welcome-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 18px;
+      border-radius: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e3fc02;
+      color: #090909;
+      font-size: 31px;
+      font-weight: 900;
+      box-shadow: 0 0 35px rgba(227,252,2,.08);
+    }
+    .welcome h2 { margin: 0; font-size: clamp(28px,4vw,39px); letter-spacing: -1.2px; }
+    .welcome p {
+      margin: 12px auto 9px;
+      max-width: 620px;
+      color: #9b9b9b;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .method {
+      display: inline-flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 23px;
+      color: #6f6f6f;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .method b { color: #a4a4a4; font-weight: 700; }
     .suggestions { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
     .suggestion {
-      border: 1px solid #303030; background: #171717; color: #ddd;
-      padding: 14px; border-radius: 13px; cursor: pointer; text-align: left; transition: .2s ease;
+      border: 1px solid #303030;
+      background: #171717;
+      color: #ddd;
+      padding: 14px;
+      border-radius: 13px;
+      cursor: pointer;
+      text-align: left;
+      transition: .2s ease;
     }
     .suggestion:hover { border-color: #e3fc02; color: #fff; transform: translateY(-1px); }
     .message-row { width: 100%; display: flex; margin-bottom: 18px; }
     .message-row.user { justify-content: flex-end; }
     .message-row.ai { justify-content: flex-start; }
-    .message-wrap { max-width: min(80%,760px); }
+    .message-wrap { max-width: min(82%,790px); }
     .message {
-      width: 100%; padding: 14px 16px; border-radius: 17px;
-      line-height: 1.65; font-size: 14px; word-break: break-word;
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 17px;
+      line-height: 1.65;
+      font-size: 14px;
+      word-break: break-word;
     }
-    .message.user { background: #e3fc02; color: #090909; border-bottom-right-radius: 5px; }
-    .message.ai { background: #1b1b1b; color: #eee; border: 1px solid #2b2b2b; border-bottom-left-radius: 5px; }
+    .message.user {
+      background: #e3fc02;
+      color: #090909;
+      border-bottom-right-radius: 5px;
+    }
+    .message.ai {
+      background: #1b1b1b;
+      color: #eee;
+      border: 1px solid #2b2b2b;
+      border-bottom-left-radius: 5px;
+    }
     .message-image {
-      display: block; width: auto; max-width: 330px; max-height: 360px;
-      margin-bottom: 12px; border-radius: 13px; object-fit: contain;
-      background: #0e0e0e; border: 1px solid #333;
+      display: block;
+      width: auto;
+      max-width: 350px;
+      max-height: 390px;
+      margin-bottom: 12px;
+      border-radius: 13px;
+      object-fit: contain;
+      background: #0e0e0e;
+      border: 1px solid #333;
     }
     .tool-cards { margin-top: 15px; display: grid; gap: 10px; }
     .tool-card {
-      display: grid; grid-template-columns: 105px 1fr; gap: 13px; padding: 10px;
-      border: 1px solid #343434; border-radius: 14px; background: #151515;
+      display: grid;
+      grid-template-columns: 105px 1fr;
+      gap: 13px;
+      padding: 10px;
+      border: 1px solid #343434;
+      border-radius: 14px;
+      background: #151515;
     }
     .tool-card-image { width: 105px; height: 85px; object-fit: cover; border-radius: 10px; background: #090909; }
     .tool-card-content { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-    .tool-card-title { margin: 0 0 8px; font-size: 14px; font-weight: 750; }
+    .tool-card-title { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
     .tool-card-actions { display: flex; flex-wrap: wrap; gap: 7px; }
     .tool-button {
-      display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
-      padding: 8px 10px; border-radius: 9px; font-size: 11px; font-weight: 700; transition: .15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 9px;
+      font-size: 11px;
+      font-weight: 750;
+      transition: .15s ease;
     }
     .tool-button.primary { background: #e3fc02; color: #090909; }
     .tool-button.secondary { background: #272727; color: #fff; border: 1px solid #3b3b3b; }
     .tool-button:hover { transform: translateY(-1px); }
     .feedback {
-      margin-top: 9px; padding: 10px 12px; background: #141414;
-      border: 1px solid #2c2c2c; border-radius: 12px;
+      margin-top: 9px;
+      padding: 11px 12px;
+      background: #141414;
+      border: 1px solid #2c2c2c;
+      border-radius: 12px;
     }
-    .feedback-question { color: #bdbdbd; font-size: 12px; margin-bottom: 8px; }
+    .feedback-question { color: #c4c4c4; font-size: 12px; margin-bottom: 8px; }
     .feedback-actions { display: flex; flex-wrap: wrap; gap: 7px; }
     .feedback-btn {
-      border: 1px solid #383838; background: #202020; color: #eee;
-      padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 12px;
+      border: 1px solid #383838;
+      background: #202020;
+      color: #eee;
+      padding: 8px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 12px;
     }
     .feedback-btn:hover { border-color: #e3fc02; }
     .feedback-btn:disabled { opacity: .5; cursor: default; }
-    .feedback-status { color: #a7a7a7; font-size: 11px; line-height: 1.4; }
+    .feedback-note { margin-top: 9px; display: grid; gap: 8px; }
+    .feedback-note textarea {
+      width: 100%;
+      min-height: 72px;
+      resize: vertical;
+      padding: 10px 11px;
+      color: #eee;
+      background: #101010;
+      border: 1px solid #343434;
+      border-radius: 10px;
+      outline: none;
+      font-size: 12px;
+    }
+    .feedback-note textarea:focus { border-color: #596300; }
+    .feedback-status { color: #a7a7a7; font-size: 11px; line-height: 1.45; }
     .feedback-status.success { color: #e3fc02; }
     .typing { display: flex; align-items: center; gap: 5px; height: 20px; }
     .typing span { width: 6px; height: 6px; border-radius: 50%; background: #e3fc02; animation: bounce 1.1s infinite; }
     .typing span:nth-child(2) { animation-delay: .15s; }
     .typing span:nth-child(3) { animation-delay: .3s; }
-    @keyframes bounce { 0%,80%,100% { opacity:.3; transform:translateY(0); } 40% { opacity:1; transform:translateY(-4px); } }
+    @keyframes bounce {
+      0%,80%,100% { opacity:.3; transform:translateY(0); }
+      40% { opacity:1; transform:translateY(-4px); }
+    }
     .composer-area { padding: 14px; border-top: 1px solid #292929; background: #111; }
     .image-preview { display: none; position: relative; width: fit-content; margin-bottom: 10px; }
-    .image-preview img { width: 95px; height: 95px; object-fit: cover; border-radius: 12px; border: 1px solid #333; background: #090909; }
+    .image-preview img {
+      width: 95px;
+      height: 95px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #090909;
+    }
     .remove-image {
-      position: absolute; right: -7px; top: -7px; width: 24px; height: 24px;
-      border: 0; border-radius: 50%; background: #e3fc02; color: #000; font-weight: 900; cursor: pointer;
+      position: absolute;
+      right: -7px;
+      top: -7px;
+      width: 24px;
+      height: 24px;
+      border: 0;
+      border-radius: 50%;
+      background: #e3fc02;
+      color: #000;
+      font-weight: 900;
+      cursor: pointer;
     }
     .composer {
-      display: flex; align-items: flex-end; gap: 8px; padding: 8px;
-      background: #191919; border: 1px solid #303030; border-radius: 17px; transition: border-color .2s ease;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 8px;
+      background: #191919;
+      border: 1px solid #303030;
+      border-radius: 17px;
+      transition: border-color .2s ease;
     }
     .composer:focus-within { border-color: #697300; }
     textarea {
-      flex: 1; min-height: 46px; max-height: 150px; resize: none;
-      background: transparent; color: #fff; border: 0; outline: 0; padding: 12px 8px; line-height: 1.45;
+      flex: 1;
+      min-height: 46px;
+      max-height: 150px;
+      resize: none;
+      background: transparent;
+      color: #fff;
+      border: 0;
+      outline: 0;
+      padding: 12px 8px;
+      line-height: 1.45;
     }
     textarea::placeholder { color: #707070; }
-    .icon-button, .send { width: 46px; height: 46px; flex-shrink: 0; border: 0; border-radius: 13px; cursor: pointer; }
+    .icon-button, .send {
+      width: 46px;
+      height: 46px;
+      flex-shrink: 0;
+      border: 0;
+      border-radius: 13px;
+      cursor: pointer;
+    }
     .icon-button { background: #292929; color: #ddd; font-size: 22px; }
     .icon-button:hover { background: #353535; }
     .send { background: #e3fc02; color: #090909; font-size: 20px; font-weight: 900; }
@@ -131,11 +311,15 @@
     @media (max-width: 700px) {
       body { padding: 0; }
       .app { height: 100vh; border: 0; border-radius: 0; }
-      .header { padding: 14px; }
+      .header { padding: 13px; }
+      .logo { width: 41px; height: 41px; }
+      .brand p { max-width: 180px; }
+      .pro-badge { display: none; }
       .small-button { padding: 8px 9px; font-size: 11px; }
       .chat { padding: 16px 12px; }
       .suggestions { grid-template-columns: 1fr; }
-      .message-wrap { max-width: 92%; }
+      .message-wrap { max-width: 94%; }
+      .message-image { max-width: 100%; }
       .tool-card { grid-template-columns: 85px 1fr; }
       .tool-card-image { width: 85px; height: 75px; }
       .composer-area { padding: 10px; }
@@ -147,9 +331,12 @@
   <header class="header">
     <div class="brand">
       <div class="logo">N</div>
-      <div>
-        <h1>NOVAGE AI</h1>
-        <p>Luna • Asistente del Taller Digital</p>
+      <div class="brand-copy">
+        <div class="brand-line">
+          <h1>Luna • NOVAGE AI</h1>
+          <span class="pro-badge">Diagnóstico experto</span>
+        </div>
+        <p>Asistente del Taller Digital del DTF</p>
       </div>
     </div>
     <button class="small-button" id="newChat">Nueva conversación</button>
@@ -159,13 +346,14 @@
     <div class="welcome" id="welcome">
       <div class="welcome-inner">
         <div class="welcome-icon">✦</div>
-        <h2>¿En qué puedo ayudarte?</h2>
-        <p>Cuéntame tu problema. Luna puede hacerte preguntas para descartar causas antes de recomendar una solución.</p>
+        <h2>¿Qué problema quieres resolver?</h2>
+        <p>Sube tu diseño o cuéntame qué sucedió. Luna analizará el caso, descartará causas y te indicará el flujo NOVAGE más conveniente.</p>
+        <div class="method"><b>Analiza</b> → <b>Pregunta</b> → <b>Descarta</b> → <b>Diagnostica</b> → <b>Resuelve</b></div>
         <div class="suggestions">
-          <button class="suggestion" data-message="Mi diseño tiene bordes blancos después de imprimir. Ayúdame a encontrar la causa.">Tengo bordes blancos</button>
-          <button class="suggestion" data-message="Tengo un diseño pixelado. Ayúdame a decidir si debo mejorarlo o vectorizarlo.">Mi diseño está pixelado</button>
-          <button class="suggestion" data-message="Tengo semitransparencias en mi diseño. ¿Cuál es el flujo correcto dentro de NOVAGE?">Tengo semitransparencias</button>
-          <button class="suggestion" data-message="Quiero preparar correctamente mi archivo final antes de mandarlo a imprimir en DTF.">Revisar archivo para DTF</button>
+          <button class="suggestion" data-message="Tengo bordes blancos después de imprimir en DTF. Ayúdame a encontrar la causa.">Bordes blancos al imprimir</button>
+          <button class="suggestion" data-message="Tengo un diseño de internet con fondo negro y quiero prepararlo para DTF. ¿Cuál es el flujo correcto?">Diseño con fondo negro</button>
+          <button class="suggestion" data-message="Mi diseño se ve pixelado. Analízame si conviene mejorarlo o vectorizarlo.">Diseño pixelado</button>
+          <button class="suggestion" data-message="Quiero revisar mi archivo final antes de mandarlo a imprimir en DTF.">Revisar archivo final</button>
         </div>
       </div>
     </div>
@@ -176,13 +364,15 @@
       <img id="previewImg" alt="Diseño seleccionado" />
       <button class="remove-image" id="removeImage" aria-label="Quitar imagen">×</button>
     </div>
+
     <div class="composer">
       <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp" hidden />
       <button class="icon-button" id="attachButton" title="Subir diseño" aria-label="Subir diseño">+</button>
-      <textarea id="input" rows="1" placeholder="Cuéntale tu problema a Luna..."></textarea>
+      <textarea id="input" rows="1" placeholder="Cuéntale tu caso a Luna..."></textarea>
       <button class="send" id="send" aria-label="Enviar">↑</button>
     </div>
-    <div class="footer-text">Luna puede cometer errores. Verifica información importante y confirma si la solución resolvió tu caso.</div>
+
+    <div class="footer-text">Luna analiza con conocimiento NOVAGE y casos reales confirmados. Verifica información crítica de producción.</div>
   </div>
 </main>
 
@@ -239,6 +429,11 @@ const NOVAGE_TOOLS = {
   "Redimensionador": {
     url: "https://novage.store/pages/redimensionar",
     image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/escalador.png?v=1777319093"
+  },
+  "Crear Plantilla DTF": {
+    url: "https://novage.store/pages/armar-plantilla-dtf",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/armador_de_plantilla.png?v=1777319093",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7646611040980962580"
   },
   "Armador de Plantilla DTF": {
     url: "https://novage.store/pages/armar-plantilla-dtf",
@@ -309,14 +504,16 @@ function loadJSON(key, fallback) {
 }
 
 function saveConversation() {
-  sessionStorage.setItem("novage_conversation", JSON.stringify(conversation.slice(-30)));
+  sessionStorage.setItem("novage_conversation", JSON.stringify(conversation.slice(-36)));
 }
 
 function saveFeedbackDone() {
   sessionStorage.setItem("novage_feedback_done", JSON.stringify([...feedbackDone]));
 }
 
-function esconderWelcome() { document.getElementById("welcome")?.remove(); }
+function esconderWelcome() {
+  document.getElementById("welcome")?.remove();
+}
 
 function escapeHTML(text) {
   const div = document.createElement("div");
@@ -328,10 +525,12 @@ function detectarHerramientas(texto) {
   const regex = /\[HERRAMIENTA:\s*([^\]]+)\]/gi;
   const nombres = [];
   let match;
+
   while ((match = regex.exec(texto)) !== null) {
     const nombre = match[1].trim();
     if (NOVAGE_TOOLS[nombre] && !nombres.includes(nombre)) nombres.push(nombre);
   }
+
   return nombres;
 }
 
@@ -364,6 +563,7 @@ function crearTarjetaHerramienta(nombre) {
   image.className = "tool-card-image";
   image.src = tool.image;
   image.alt = nombre;
+  image.loading = "lazy";
   card.appendChild(image);
 
   const content = document.createElement("div");
@@ -377,13 +577,15 @@ function crearTarjetaHerramienta(nombre) {
   const actions = document.createElement("div");
   actions.className = "tool-card-actions";
 
-  const open = document.createElement("a");
-  open.href = tool.url;
-  open.target = "_blank";
-  open.rel = "noopener noreferrer";
-  open.className = "tool-button primary";
-  open.textContent = "Abrir herramienta";
-  actions.appendChild(open);
+  if (tool.url) {
+    const open = document.createElement("a");
+    open.href = tool.url;
+    open.target = "_blank";
+    open.rel = "noopener noreferrer";
+    open.className = "tool-button primary";
+    open.textContent = "Abrir herramienta";
+    actions.appendChild(open);
+  }
 
   if (tool.video) {
     const tutorial = document.createElement("a");
@@ -401,9 +603,12 @@ function crearTarjetaHerramienta(nombre) {
 }
 
 function getConversationUntil(responseId) {
-  const index = conversation.findIndex((item) => item.role === "assistant" && item.responseId === responseId);
-  if (index === -1) return conversation.slice(-24);
-  return conversation.slice(0, index + 1).slice(-24);
+  const index = conversation.findIndex(
+    (item) => item.role === "assistant" && item.responseId === responseId
+  );
+
+  if (index === -1) return conversation.slice(-28);
+  return conversation.slice(0, index + 1).slice(-28);
 }
 
 function crearFeedback(responseId) {
@@ -435,49 +640,94 @@ function crearFeedback(responseId) {
   actions.appendChild(no);
   box.appendChild(actions);
 
-  async function sendFeedback(helpful) {
-    yes.disabled = true;
-    no.disabled = true;
-
+  function setStatus(text, success = false) {
+    box.innerHTML = "";
     const status = document.createElement("div");
-    status.className = "feedback-status";
-    status.textContent = helpful ? "Guardando el caso resuelto..." : "Gracias. Luna seguirá diagnosticando.";
-    actions.replaceWith(status);
+    status.className = success ? "feedback-status success" : "feedback-status";
+    status.textContent = text;
+    box.appendChild(status);
+  }
+
+  async function savePositive(customerNote = "") {
+    setStatus("Guardando este caso como experiencia confirmada de NOVAGE...");
 
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          helpful,
+          helpful: true,
           responseId,
+          customerNote,
           conversation: getConversationUntil(responseId)
         })
       });
+
       const data = await response.json();
+      if (!response.ok) throw new Error(data.details || data.error || "No se pudo guardar el caso.");
 
       feedbackDone.add(responseId);
       saveFeedbackDone();
-
-      if (!response.ok) throw new Error(data.details || data.error || "No se pudo registrar la valoración.");
-
-      if (helpful) {
-        status.className = "feedback-status success";
-        status.textContent = "✓ Gracias. Este caso quedó guardado como experiencia confirmada para ayudar en problemas similares.";
-      } else {
-        status.textContent = "Gracias. No guardaré esta respuesta como solución. Luna te hará más preguntas.";
-        setTimeout(() => {
-          enviarMensaje("La solución anterior no resolvió mi problema. Antes de dar otro diagnóstico, hazme las preguntas necesarias para descartar otras causas.");
-        }, 500);
-      }
+      setStatus("✓ Gracias. Este caso quedó guardado para ayudar a Luna con problemas similares.", true);
     } catch (error) {
       console.error(error);
-      status.textContent = "No pude registrar la valoración. Puedes seguir hablando con Luna normalmente.";
+      setStatus("No pude guardar el caso. Puedes seguir usando Luna normalmente.");
     }
   }
 
-  yes.addEventListener("click", () => sendFeedback(true));
-  no.addEventListener("click", () => sendFeedback(false));
+  async function sendNegative() {
+    yes.disabled = true;
+    no.disabled = true;
+    setStatus("Gracias. Esta respuesta no se guardará como solución. Luna seguirá descartando causas.");
+
+    feedbackDone.add(responseId);
+    saveFeedbackDone();
+
+    setTimeout(() => {
+      enviarMensaje(
+        "La solución anterior no resolvió mi problema. No repitas el mismo diagnóstico: revisa lo que ya te respondí y haz únicamente las preguntas decisivas que falten para descartar otras causas."
+      );
+    }, 450);
+  }
+
+  yes.addEventListener("click", () => {
+    actions.remove();
+
+    const noteWrap = document.createElement("div");
+    noteWrap.className = "feedback-note";
+
+    const label = document.createElement("div");
+    label.className = "feedback-question";
+    label.textContent = "¿Qué fue lo que te ayudó? (opcional, mejora los casos futuros)";
+
+    const note = document.createElement("textarea");
+    note.maxLength = 1200;
+    note.placeholder = "Ejemplo: revisé la plantilla final y el problema era el desfase de tinta blanca...";
+
+    const noteActions = document.createElement("div");
+    noteActions.className = "feedback-actions";
+
+    const save = document.createElement("button");
+    save.className = "feedback-btn";
+    save.textContent = "Guardar caso";
+
+    const skip = document.createElement("button");
+    skip.className = "feedback-btn";
+    skip.textContent = "Guardar sin comentario";
+
+    noteActions.appendChild(save);
+    noteActions.appendChild(skip);
+    noteWrap.appendChild(label);
+    noteWrap.appendChild(note);
+    noteWrap.appendChild(noteActions);
+    box.appendChild(noteWrap);
+
+    save.addEventListener("click", () => savePositive(note.value.trim()));
+    skip.addEventListener("click", () => savePositive(""));
+    note.focus();
+  });
+
+  no.addEventListener("click", sendNegative);
   return box;
 }
 
@@ -497,6 +747,7 @@ function renderMensaje(tipo, texto, imagen = null, responseId = null) {
     const img = document.createElement("img");
     img.src = imagen;
     img.className = "message-image";
+    img.alt = "Imagen enviada por el usuario";
     bubble.appendChild(img);
   }
 
@@ -511,10 +762,12 @@ function renderMensaje(tipo, texto, imagen = null, responseId = null) {
   if (tipo === "ai" && herramientas.length) {
     const cards = document.createElement("div");
     cards.className = "tool-cards";
+
     herramientas.forEach((nombre) => {
       const card = crearTarjetaHerramienta(nombre);
       if (card) cards.appendChild(card);
     });
+
     bubble.appendChild(cards);
   }
 
@@ -531,15 +784,19 @@ function renderMensaje(tipo, texto, imagen = null, responseId = null) {
 
 function agregarTyping() {
   esconderWelcome();
+
   const row = document.createElement("div");
   row.className = "message-row ai";
   row.id = "typing";
   row.innerHTML = '<div class="message-wrap"><div class="message ai"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+
   chat.appendChild(row);
   chat.scrollTop = chat.scrollHeight;
 }
 
-function quitarTyping() { document.getElementById("typing")?.remove(); }
+function quitarTyping() {
+  document.getElementById("typing")?.remove();
+}
 
 function limpiarImagen() {
   selectedImage = null;
@@ -548,35 +805,12 @@ function limpiarImagen() {
   previewImg.src = "";
 }
 
-function comprimirImagen(file) {
+function loadImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
-      img.onload = () => {
-        const MAX = 1800;
-        let width = img.width;
-        let height = img.height;
-        if (width > MAX || height > MAX) {
-          const ratio = Math.min(MAX / width, MAX / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-
-        if (file.type === "image/png") {
-          resolve(canvas.toDataURL("image/png"));
-        } else if (file.type === "image/webp") {
-          resolve(canvas.toDataURL("image/webp", 0.88));
-        } else {
-          resolve(canvas.toDataURL("image/jpeg", 0.88));
-        }
-      };
+      img.onload = () => resolve({ img, originalDataUrl: reader.result });
       img.onerror = reject;
       img.src = reader.result;
     };
@@ -585,25 +819,79 @@ function comprimirImagen(file) {
   });
 }
 
+async function prepararImagen(file) {
+  const { img, originalDataUrl } = await loadImage(file);
+
+  if (
+    file.type === "image/png" &&
+    file.size <= 2.2 * 1024 * 1024 &&
+    img.width <= 1800 &&
+    img.height <= 1800
+  ) {
+    return originalDataUrl;
+  }
+
+  const MAX = 1600;
+  const ratio = Math.min(1, MAX / img.width, MAX / img.height);
+  const width = Math.max(1, Math.round(img.width * ratio));
+  const height = Math.max(1, Math.round(img.height * ratio));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(img, 0, 0, width, height);
+
+  let encoded = canvas.toDataURL("image/webp", 0.9);
+
+  if (encoded.length > 4_000_000) {
+    const MAX_SMALL = 1200;
+    const ratioSmall = Math.min(1, MAX_SMALL / img.width, MAX_SMALL / img.height);
+    const w = Math.max(1, Math.round(img.width * ratioSmall));
+    const h = Math.max(1, Math.round(img.height * ratioSmall));
+
+    canvas.width = w;
+    canvas.height = h;
+    const ctx2 = canvas.getContext("2d");
+    ctx2.clearRect(0, 0, w, h);
+    ctx2.drawImage(img, 0, 0, w, h);
+    encoded = canvas.toDataURL("image/webp", 0.82);
+  }
+
+  return encoded;
+}
+
 async function cargarImagen(file) {
   if (!file) return;
-  if (!["image/png","image/jpeg","image/webp"].includes(file.type)) {
+
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
     alert("Sube una imagen PNG, JPG o WEBP.");
     return;
   }
-  if (file.size > 15 * 1024 * 1024) {
-    alert("La imagen es demasiado grande. Máximo 15 MB.");
+
+  if (file.size > 18 * 1024 * 1024) {
+    alert("La imagen es demasiado grande. Máximo 18 MB.");
     return;
   }
 
   try {
-    selectedImage = await comprimirImagen(file);
+    selectedImage = await prepararImagen(file);
     previewImg.src = selectedImage;
     imagePreview.style.display = "block";
   } catch (error) {
     console.error(error);
     alert("No se pudo cargar la imagen.");
   }
+}
+
+function conversationContextForApi() {
+  return conversation.slice(-10).map((item) => ({
+    role: item.role,
+    text: item.text,
+    hasImage: Boolean(item.hasImage)
+  }));
 }
 
 async function enviarMensaje(mensajeManual = null) {
@@ -613,7 +901,8 @@ async function enviarMensaje(mensajeManual = null) {
   if (!mensaje && !selectedImage) return;
 
   const imagenActual = selectedImage;
-  const textoUsuario = mensaje || "Analiza esta imagen y ayúdame a diagnosticar el problema antes de recomendar una solución.";
+  const textoUsuario = mensaje || "Analiza esta imagen como especialista NOVAGE y dime cuál es el flujo correcto. Si falta un dato decisivo, pregúntamelo antes de concluir.";
+  const contextBeforeCurrentTurn = conversationContextForApi();
 
   enviando = true;
   sendButton.disabled = true;
@@ -634,14 +923,17 @@ async function enviarMensaje(mensajeManual = null) {
       body: JSON.stringify({
         mensaje: textoUsuario,
         imagen: imagenActual,
-        previousResponseId
+        previousResponseId,
+        conversationContext: contextBeforeCurrentTurn
       })
     });
 
     const data = await response.json();
     quitarTyping();
 
-    if (!response.ok) throw new Error(data.details || data.error || "No se pudo generar una respuesta.");
+    if (!response.ok) {
+      throw new Error(data.details || data.error || "No se pudo generar una respuesta.");
+    }
 
     if (data.responseId) {
       previousResponseId = data.responseId;
@@ -649,12 +941,19 @@ async function enviarMensaje(mensajeManual = null) {
     }
 
     const answer = data.respuesta || "No pude generar una respuesta.";
+    const sources = [
+      ...(data.retrieval?.knowledge || []),
+      ...(data.retrieval?.cases || [])
+    ];
+
     conversation.push({
       role: "assistant",
       text: answer,
       hasImage: false,
-      responseId: data.responseId || null
+      responseId: data.responseId || null,
+      sources
     });
+
     saveConversation();
     renderMensaje("ai", answer, null, data.responseId || null);
   } catch (error) {
@@ -675,9 +974,15 @@ function ajustarTextarea() {
 
 function restaurarConversacion() {
   if (!conversation.length) return;
+
   esconderWelcome();
   conversation.forEach((item) => {
-    renderMensaje(item.role === "assistant" ? "ai" : "user", item.text, null, item.responseId || null);
+    renderMensaje(
+      item.role === "assistant" ? "ai" : "user",
+      item.text,
+      null,
+      item.responseId || null
+    );
   });
 }
 
