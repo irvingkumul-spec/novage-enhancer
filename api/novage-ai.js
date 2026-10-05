@@ -44,6 +44,64 @@ function extractText(data) {
   return texts.join("\n").trim() || "No se pudo obtener una respuesta.";
 }
 
+function parseStructuredAnswer(data) {
+  const raw = extractText(data);
+
+  try {
+    const parsed = JSON.parse(raw);
+    const status = parsed?.status === "question" ? "question" : "solution";
+    const message = typeof parsed?.message === "string"
+      ? parsed.message.trim()
+      : "No se pudo obtener una respuesta.";
+
+    const question = typeof parsed?.decision?.question === "string"
+      ? parsed.decision.question.trim()
+      : "";
+
+    const options = Array.isArray(parsed?.decision?.options)
+      ? parsed.decision.options
+          .filter((item) => typeof item === "string" && item.trim())
+          .map((item) => item.trim())
+          .slice(0, 4)
+      : [];
+
+    const tools = Array.isArray(parsed?.tools)
+      ? [...new Set(
+          parsed.tools
+            .filter((item) => typeof item === "string" && item.trim())
+            .map((item) => item.trim())
+        )]
+      : [];
+
+    if (status === "question" && (!question || options.length < 2)) {
+      return {
+        message,
+        status: "solution",
+        decision: { question: "", options: [] },
+        tools,
+      };
+    }
+
+    return {
+      message,
+      status,
+      decision:
+        status === "question"
+          ? { question, options }
+          : { question: "", options: [] },
+      tools,
+    };
+  } catch (error) {
+    console.error("NOVAGE structured output parse error:", error, raw);
+    return {
+      message: raw,
+      status: "solution",
+      decision: { question: "", options: [] },
+      tools: [],
+    };
+  }
+}
+
 function cleanConversationContext(value) {
   if (!Array.isArray(value)) return [];
 
@@ -54,6 +112,8 @@ function cleanConversationContext(value) {
       const text = typeof item?.text === "string"
         ? item.text
             .replace(/\[HERRAMIENTA:\s*[^\]]+\]/gi, "")
+            .replace(/\[PREGUNTA_DECISIVA:\s*[^\]]+\]/gi, "")
+            .replace(/\[OPCIONES:\s*[^\]]+\]/gi, "")
             .replace(/\[ESTADO:\s*(?:PREGUNTA|SOLUCION)\]/gi, "")
             .trim()
             .slice(0, 1800)
@@ -210,9 +270,79 @@ Antes de preguntar, comprueba:
 "¿La respuesta a esto puede cambiar mi diagnóstico o mi ruta de preparación?"
 Si no puede cambiarla, no preguntes.
 
-Haz como máximo 1 o 2 preguntas decisivas por turno.
+Haz como máximo 1 pregunta decisiva por turno.
 No preguntes algo que ya puedas observar en la imagen.
 En cuanto tengas evidencia suficiente, deja de preguntar y resuelve.
+
+
+======================================================================
+PROTOCOLO DE PREGUNTAS DECISIVAS CON BOTONES
+======================================================================
+
+La respuesta final se entrega al frontend en una estructura JSON. NO escribas marcadores técnicos dentro del texto visible.
+
+Cuando falte UN dato que cambie realmente el diagnóstico o la ruta:
+- status = "question"
+- message = explicación breve de por qué ese dato importa, SIN repetir la pregunta;
+- decision.question = una sola pregunta decisiva;
+- decision.options = entre 2 y 4 opciones cortas;
+- tools = [] salvo que una herramienta sea útil solo como referencia y no implique una solución prematura.
+
+Cuando ya exista información suficiente:
+- status = "solution"
+- message = diagnóstico o flujo concreto, ordenado y accionable;
+- decision.question = "";
+- decision.options = [];
+- tools = únicamente las herramientas NOVAGE realmente útiles.
+
+REGLAS:
+- Máximo UNA pregunta decisiva por respuesta.
+- No preguntes al usuario qué técnica desea utilizar si tú puedes decidirlo.
+- No preguntes cosas evidentes en la imagen.
+- No repitas una pregunta ya contestada.
+- Si una opción seleccionada ya resuelve la incertidumbre, deja de preguntar y da el flujo exacto.
+- No muestres todas las ramas posibles antes de que el usuario conteste. Eso vuelve la respuesta confusa.
+- Las opciones deben estar escritas para principiantes, no para técnicos.
+
+EJEMPLOS DE DECISIONES:
+Pregunta: ¿La playera será negra?
+Opciones: Sí | No
+
+Pregunta: ¿Dónde creaste la plantilla final?
+Opciones: Crear Plantilla NOVAGE | Canva | Photoshop | Otra aplicación
+
+Pregunta: ¿Cómo aparece el borde blanco?
+Opciones: Principalmente de un solo lado | Rodea todo el contorno | No estoy seguro
+
+CASO MODELO - DISEÑO DETALLADO DE PINTEREST CON FONDO NEGRO:
+Primero reconoce que:
+- es rasterizado, detallado y texturizado;
+- vectorizar no es la primera opción;
+- el negro funciona como parte visual o espacio negativo;
+- la decisión que cambia la preparación es el color de la prenda.
+
+La primera respuesta ideal tiene:
+status = "question"
+message = "Es un diseño detallado y texturizado, así que no lo vectorizaría como primer paso. El dato que cambia la preparación es el color de la prenda."
+decision.question = "¿La playera será negra?"
+decision.options = ["Sí", "No"]
+
+Si responde "Sí":
+- Aprovecha el negro de la tela.
+- Si la calidad lo necesita, primero Mejorador con IA.
+- El cliente debe descargar el archivo mejorado.
+- Después debe pasarlo a Semitonos Fáciles o Semitonos Profesionales.
+- Evita imprimir una gran plasta negra.
+- Da los pasos en orden.
+- status = "solution".
+
+Si responde "No":
+- Explica que el diseño depende visualmente del negro.
+- No prometas que quedará igual.
+- Recomienda adaptar/rediseñar el arte antes de imprimirlo.
+- No elimines el negro automáticamente si destruye la composición.
+- status = "solution" si ya diste una ruta accionable.
+
 
 ======================================================================
 PRIORIDAD DE EVIDENCIA
@@ -295,8 +425,8 @@ FORMA DE RESPONDER
 HERRAMIENTAS
 ======================================================================
 
-Cuando una herramienta NOVAGE sea realmente útil, añade al final:
-[HERRAMIENTA: Nombre exacto]
+La salida estructurada tiene un array "tools".
+Incluye únicamente nombres exactos de herramientas configuradas cuando sean realmente útiles.
 
 Nombres válidos:
 Guía del Taller Digital
@@ -321,17 +451,31 @@ Marcos Grunge
 Vectorizador NOVAGE
 Semitonos Fáciles
 
-Semitonos Profesionales puede mencionarse en texto, pero no emitas marcador hasta que exista una URL configurada.
+Semitonos Profesionales puede mencionarse dentro de "message", pero no lo añadas a "tools" hasta que exista una URL configurada.
+
+No metas herramientas por rellenar.
+Si estás esperando una respuesta decisiva y la herramienta depende de esa respuesta, deja "tools" vacío.
 
 ======================================================================
 ESTADO INTERNO
 ======================================================================
 
-Al final, después de los marcadores de herramienta, añade exactamente uno:
-[ESTADO: PREGUNTA] si todavía necesitas una respuesta decisiva antes de dar una solución fiable.
-[ESTADO: SOLUCION] si ya diste una ruta, solución o diagnóstico accionable que el cliente puede probar/verificar.
+La estructura de salida debe representar exactamente uno de dos estados:
 
-No expliques estos marcadores. La interfaz los oculta.
+QUESTION:
+- status = "question"
+- decision.question no vacío
+- decision.options con al menos 2 opciones
+- todavía falta un dato decisivo
+
+SOLUTION:
+- status = "solution"
+- decision.question = ""
+- decision.options = []
+- ya diste una ruta, diagnóstico o solución que el cliente puede probar
+
+El campo "message" es lo único que verá el cliente como texto de Luna.
+No pongas JSON, marcadores internos ni nombres de campos dentro de "message".
 `;
 
 export default async function handler(req, res) {
@@ -444,7 +588,7 @@ Usa el contexto oficial como fuente NOVAGE principal. Usa los casos solo para re
     }
 
     if (imagen) {
-      content.push({ type: "input_image", image_url: imagen });
+      content.push({ type: "input_image", image_url: imagen, detail: "high" });
     }
 
     const payload = {
@@ -453,11 +597,71 @@ Usa el contexto oficial como fuente NOVAGE principal. Usa los casos solo para re
       input: [{ role: "user", content }],
       reasoning: { effort: "medium" },
       max_output_tokens: 2400,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "novage_luna_response",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              message: { type: "string" },
+              status: {
+                type: "string",
+                enum: ["question", "solution"]
+              },
+              decision: {
+                type: "object",
+                properties: {
+                  question: { type: "string" },
+                  options: {
+                    type: "array",
+                    items: { type: "string" }
+                  }
+                },
+                required: ["question", "options"],
+                additionalProperties: false
+              },
+              tools: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: [
+                    "Guía del Taller Digital",
+                    "Mejorador con IA",
+                    "Mejorador NOVAGE",
+                    "Eliminador de Fondos",
+                    "Semitonos",
+                    "Semitransparencias",
+                    "Contraer Bordes",
+                    "Redimensionador",
+                    "Crear Plantilla DTF",
+                    "Armador de Plantilla DTF",
+                    "Mockups",
+                    "Pedrería",
+                    "Calculadora de Precios",
+                    "Escáner DTF",
+                    "DTF + Pedrería",
+                    "Conversor de Archivos",
+                    "Guía de Medidas",
+                    "DTF con Vinil",
+                    "Marcos Grunge",
+                    "Vectorizador NOVAGE",
+                    "Semitonos Fáciles"
+                  ]
+                }
+              }
+            },
+            required: ["message", "status", "decision", "tools"],
+            additionalProperties: false
+          }
+        }
+      },
       store: true,
-      prompt_cache_key: "novage-luna-v3",
+      prompt_cache_key: "novage-luna-v4",
       metadata: {
         app: "novage-ai",
-        knowledge_version: "v3",
+        knowledge_version: "v4",
       },
     };
 
@@ -484,8 +688,13 @@ Usa el contexto oficial como fuente NOVAGE principal. Usa los casos solo para re
       });
     }
 
+    const structured = parseStructuredAnswer(data);
+
     return res.status(200).json({
-      respuesta: extractText(data),
+      respuesta: structured.message,
+      estado: structured.status,
+      decision: structured.decision,
+      tools: structured.tools,
       responseId: data.id || null,
       remaining: limit.remaining,
       retrieval: {
