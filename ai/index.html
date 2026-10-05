@@ -1,2009 +1,713 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NOVAGE AI</title>
-
   <style>
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
+    * { box-sizing: border-box; }
+    html, body {
       margin: 0;
       width: 100%;
       min-height: 100%;
-
-      font-family:
-        Inter,
-        Arial,
-        Helvetica,
-        sans-serif;
-
+      font-family: Inter, Arial, Helvetica, sans-serif;
       background: #0b0b0b;
-      color: #ffffff;
+      color: #fff;
     }
-
-    body {
-      min-height: 100vh;
-
-      display: flex;
-      justify-content: center;
-
-      padding: 20px;
-    }
-
-    button,
-    textarea {
-      font: inherit;
-    }
-
+    body { min-height: 100vh; display: flex; justify-content: center; padding: 18px; }
+    button, textarea { font: inherit; }
     .app {
-      width: 100%;
-      max-width: 1050px;
-
-      height:
-        calc(100vh - 40px);
-
-      display: flex;
-      flex-direction: column;
-
-      background: #111111;
-
-      border:
-        1px solid #292929;
-
-      border-radius: 24px;
-
-      overflow: hidden;
-
-      box-shadow:
-        0 25px 90px
-        rgba(
-          0,
-          0,
-          0,
-          .45
-        );
+      width: 100%; max-width: 1050px; height: calc(100vh - 36px);
+      display: flex; flex-direction: column; overflow: hidden;
+      background: #111; border: 1px solid #292929; border-radius: 24px;
+      box-shadow: 0 25px 90px rgba(0,0,0,.45);
     }
-
     .header {
-      padding:
-        18px 20px;
-
-      border-bottom:
-        1px solid #292929;
-
-      display: flex;
-      align-items: center;
-      justify-content:
-        space-between;
-
-      gap: 20px;
+      padding: 18px 20px; border-bottom: 1px solid #292929;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
     }
-
-    .brand {
-      display: flex;
-      align-items: center;
-
-      gap: 12px;
-    }
-
+    .brand { display: flex; align-items: center; gap: 12px; }
     .logo {
-      width: 44px;
-      height: 44px;
-
-      border-radius: 14px;
-
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      background: #e3fc02;
-      color: #090909;
-
-      font-size: 20px;
-      font-weight: 900;
+      width: 44px; height: 44px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      background: #e3fc02; color: #090909; font-size: 20px; font-weight: 900;
     }
-
-    .brand h1 {
-      margin: 0;
-
-      font-size: 18px;
-      font-weight: 800;
-    }
-
-    .brand p {
-      margin:
-        4px 0 0;
-
-      color: #929292;
-
-      font-size: 12px;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-
-      gap: 8px;
-    }
-
+    .brand h1 { margin: 0; font-size: 18px; font-weight: 800; }
+    .brand p { margin: 4px 0 0; color: #929292; font-size: 12px; }
     .small-button {
-      border:
-        1px solid #343434;
-
-      background: #171717;
-      color: #dddddd;
-
-      padding:
-        9px 12px;
-
-      border-radius: 10px;
-
-      cursor: pointer;
-
-      transition:
-        .2s ease;
+      border: 1px solid #343434; background: #171717; color: #ddd;
+      padding: 9px 12px; border-radius: 10px; cursor: pointer; transition: .2s ease;
     }
-
-    .small-button:hover {
-      border-color:
-        #e3fc02;
-
-      color: white;
-    }
-
-    .chat {
-      flex: 1;
-
-      overflow-y: auto;
-
-      padding: 24px;
-
-      scroll-behavior:
-        smooth;
-    }
-
-    .welcome {
-      min-height: 100%;
-
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .welcome-inner {
-      width: 100%;
-      max-width: 690px;
-
-      text-align: center;
-    }
-
+    .small-button:hover { border-color: #e3fc02; color: #fff; }
+    .chat { flex: 1; overflow-y: auto; padding: 24px; scroll-behavior: smooth; }
+    .welcome { min-height: 100%; display: flex; align-items: center; justify-content: center; }
+    .welcome-inner { width: 100%; max-width: 690px; text-align: center; }
     .welcome-icon {
-      width: 70px;
-      height: 70px;
-
-      margin:
-        0 auto 18px;
-
-      border-radius: 22px;
-
-      display: flex;
-      justify-content: center;
-      align-items: center;
-
-      background: #e3fc02;
-      color: #090909;
-
-      font-size: 30px;
-      font-weight: 900;
+      width: 70px; height: 70px; margin: 0 auto 18px; border-radius: 22px;
+      display: flex; align-items: center; justify-content: center;
+      background: #e3fc02; color: #090909; font-size: 30px; font-weight: 900;
     }
-
-    .welcome h2 {
-      margin: 0;
-
-      font-size:
-        clamp(
-          28px,
-          4vw,
-          38px
-        );
-
-      letter-spacing:
-        -1px;
-    }
-
-    .welcome p {
-      margin:
-        12px auto 22px;
-
-      max-width: 580px;
-
-      color: #999999;
-
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    .suggestions {
-      display: grid;
-
-      grid-template-columns:
-        repeat(2, 1fr);
-
-      gap: 10px;
-    }
-
+    .welcome h2 { margin: 0; font-size: clamp(28px,4vw,38px); letter-spacing: -1px; }
+    .welcome p { margin: 12px auto 22px; max-width: 590px; color: #999; font-size: 14px; line-height: 1.6; }
+    .suggestions { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
     .suggestion {
-      border:
-        1px solid #303030;
-
-      background: #171717;
-      color: #dddddd;
-
-      padding: 14px;
-
-      border-radius: 13px;
-
-      cursor: pointer;
-
-      text-align: left;
-
-      transition:
-        .2s ease;
+      border: 1px solid #303030; background: #171717; color: #ddd;
+      padding: 14px; border-radius: 13px; cursor: pointer; text-align: left; transition: .2s ease;
     }
-
-    .suggestion:hover {
-      border-color:
-        #e3fc02;
-
-      transform:
-        translateY(-1px);
-
-      color: white;
-    }
-
-    .message-row {
-      width: 100%;
-
-      display: flex;
-
-      margin-bottom: 18px;
-    }
-
-    .message-row.user {
-      justify-content:
-        flex-end;
-    }
-
-    .message-row.ai {
-      justify-content:
-        flex-start;
-    }
-
+    .suggestion:hover { border-color: #e3fc02; color: #fff; transform: translateY(-1px); }
+    .message-row { width: 100%; display: flex; margin-bottom: 18px; }
+    .message-row.user { justify-content: flex-end; }
+    .message-row.ai { justify-content: flex-start; }
+    .message-wrap { max-width: min(80%,760px); }
     .message {
-      max-width:
-        min(
-          78%,
-          720px
-        );
-
-      padding:
-        14px 16px;
-
-      border-radius: 17px;
-
-      line-height: 1.65;
-      font-size: 14px;
-
-      word-break:
-        break-word;
+      width: 100%; padding: 14px 16px; border-radius: 17px;
+      line-height: 1.65; font-size: 14px; word-break: break-word;
     }
-
-    .message.user {
-      background:
-        #e3fc02;
-
-      color:
-        #090909;
-
-      border-bottom-right-radius:
-        5px;
-    }
-
-    .message.ai {
-      background:
-        #1b1b1b;
-
-      color:
-        #eeeeee;
-
-      border:
-        1px solid #2b2b2b;
-
-      border-bottom-left-radius:
-        5px;
-    }
-
+    .message.user { background: #e3fc02; color: #090909; border-bottom-right-radius: 5px; }
+    .message.ai { background: #1b1b1b; color: #eee; border: 1px solid #2b2b2b; border-bottom-left-radius: 5px; }
     .message-image {
-      display: block;
-
-      width: auto;
-      max-width: 300px;
-      max-height: 340px;
-
-      margin-bottom: 12px;
-
-      border-radius: 13px;
-
-      object-fit: contain;
-
-      background: #0e0e0e;
-
-      border:
-        1px solid #333333;
+      display: block; width: auto; max-width: 330px; max-height: 360px;
+      margin-bottom: 12px; border-radius: 13px; object-fit: contain;
+      background: #0e0e0e; border: 1px solid #333;
     }
-
-    .tool-cards {
-      margin-top: 15px;
-
-      display: grid;
-
-      gap: 10px;
-    }
-
+    .tool-cards { margin-top: 15px; display: grid; gap: 10px; }
     .tool-card {
-      display: grid;
-
-      grid-template-columns:
-        105px 1fr;
-
-      gap: 13px;
-
-      padding: 10px;
-
-      border:
-        1px solid #343434;
-
-      border-radius: 14px;
-
-      background: #151515;
+      display: grid; grid-template-columns: 105px 1fr; gap: 13px; padding: 10px;
+      border: 1px solid #343434; border-radius: 14px; background: #151515;
     }
-
-    .tool-card-image {
-      width: 105px;
-      height: 85px;
-
-      object-fit: cover;
-
-      border-radius: 10px;
-
-      background: #090909;
-    }
-
-    .tool-card-content {
-      min-width: 0;
-
-      display: flex;
-      flex-direction: column;
-
-      justify-content: center;
-    }
-
-    .tool-card-title {
-      margin:
-        0 0 8px;
-
-      font-size: 14px;
-      font-weight: 750;
-    }
-
-    .tool-card-actions {
-      display: flex;
-      flex-wrap: wrap;
-
-      gap: 7px;
-    }
-
+    .tool-card-image { width: 105px; height: 85px; object-fit: cover; border-radius: 10px; background: #090909; }
+    .tool-card-content { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .tool-card-title { margin: 0 0 8px; font-size: 14px; font-weight: 750; }
+    .tool-card-actions { display: flex; flex-wrap: wrap; gap: 7px; }
     .tool-button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-
-      text-decoration: none;
-
-      padding:
-        8px 10px;
-
-      border-radius: 9px;
-
-      font-size: 11px;
-      font-weight: 700;
-
-      transition:
-        .15s ease;
+      display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
+      padding: 8px 10px; border-radius: 9px; font-size: 11px; font-weight: 700; transition: .15s ease;
     }
-
-    .tool-button.primary {
-      background:
-        #e3fc02;
-
-      color:
-        #090909;
+    .tool-button.primary { background: #e3fc02; color: #090909; }
+    .tool-button.secondary { background: #272727; color: #fff; border: 1px solid #3b3b3b; }
+    .tool-button:hover { transform: translateY(-1px); }
+    .feedback {
+      margin-top: 9px; padding: 10px 12px; background: #141414;
+      border: 1px solid #2c2c2c; border-radius: 12px;
     }
-
-    .tool-button.secondary {
-      background:
-        #272727;
-
-      color:
-        white;
-
-      border:
-        1px solid #3b3b3b;
+    .feedback-question { color: #bdbdbd; font-size: 12px; margin-bottom: 8px; }
+    .feedback-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+    .feedback-btn {
+      border: 1px solid #383838; background: #202020; color: #eee;
+      padding: 8px 10px; border-radius: 9px; cursor: pointer; font-size: 12px;
     }
-
-    .tool-button:hover {
-      transform:
-        translateY(-1px);
-    }
-
-    .typing {
-      display: flex;
-
-      align-items: center;
-
-      gap: 5px;
-
-      height: 20px;
-    }
-
-    .typing span {
-      width: 6px;
-      height: 6px;
-
-      border-radius: 50%;
-
-      background:
-        #e3fc02;
-
-      animation:
-        bounce 1.1s infinite;
-    }
-
-    .typing span:nth-child(2) {
-      animation-delay:
-        .15s;
-    }
-
-    .typing span:nth-child(3) {
-      animation-delay:
-        .3s;
-    }
-
-    @keyframes bounce {
-
-      0%,
-      80%,
-      100% {
-        opacity: .3;
-
-        transform:
-          translateY(0);
-      }
-
-      40% {
-        opacity: 1;
-
-        transform:
-          translateY(-4px);
-      }
-
-    }
-
-    .composer-area {
-      padding: 14px;
-
-      border-top:
-        1px solid #292929;
-
-      background:
-        #111111;
-    }
-
-    .image-preview {
-      display: none;
-
-      position: relative;
-
-      width: fit-content;
-
-      margin-bottom: 10px;
-    }
-
-    .image-preview img {
-      width: 95px;
-      height: 95px;
-
-      object-fit: cover;
-
-      border-radius: 12px;
-
-      border:
-        1px solid #333333;
-
-      background:
-        #090909;
-    }
-
+    .feedback-btn:hover { border-color: #e3fc02; }
+    .feedback-btn:disabled { opacity: .5; cursor: default; }
+    .feedback-status { color: #a7a7a7; font-size: 11px; line-height: 1.4; }
+    .feedback-status.success { color: #e3fc02; }
+    .typing { display: flex; align-items: center; gap: 5px; height: 20px; }
+    .typing span { width: 6px; height: 6px; border-radius: 50%; background: #e3fc02; animation: bounce 1.1s infinite; }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%,80%,100% { opacity:.3; transform:translateY(0); } 40% { opacity:1; transform:translateY(-4px); } }
+    .composer-area { padding: 14px; border-top: 1px solid #292929; background: #111; }
+    .image-preview { display: none; position: relative; width: fit-content; margin-bottom: 10px; }
+    .image-preview img { width: 95px; height: 95px; object-fit: cover; border-radius: 12px; border: 1px solid #333; background: #090909; }
     .remove-image {
-      position: absolute;
-
-      right: -7px;
-      top: -7px;
-
-      width: 24px;
-      height: 24px;
-
-      border: 0;
-      border-radius: 50%;
-
-      background:
-        #e3fc02;
-
-      color:
-        #000000;
-
-      font-weight: 900;
-
-      cursor: pointer;
+      position: absolute; right: -7px; top: -7px; width: 24px; height: 24px;
+      border: 0; border-radius: 50%; background: #e3fc02; color: #000; font-weight: 900; cursor: pointer;
     }
-
     .composer {
-      display: flex;
-      align-items:
-        flex-end;
-
-      gap: 8px;
-
-      padding: 8px;
-
-      background:
-        #191919;
-
-      border:
-        1px solid #303030;
-
-      border-radius: 17px;
-
-      transition:
-        border-color .2s ease;
+      display: flex; align-items: flex-end; gap: 8px; padding: 8px;
+      background: #191919; border: 1px solid #303030; border-radius: 17px; transition: border-color .2s ease;
     }
-
-    .composer:focus-within {
-      border-color:
-        #697300;
-    }
-
+    .composer:focus-within { border-color: #697300; }
     textarea {
-      flex: 1;
-
-      min-height: 46px;
-      max-height: 150px;
-
-      resize: none;
-
-      background:
-        transparent;
-
-      color:
-        white;
-
-      border: 0;
-      outline: 0;
-
-      padding:
-        12px 8px;
-
-      line-height: 1.45;
+      flex: 1; min-height: 46px; max-height: 150px; resize: none;
+      background: transparent; color: #fff; border: 0; outline: 0; padding: 12px 8px; line-height: 1.45;
     }
-
-    textarea::placeholder {
-      color:
-        #707070;
+    textarea::placeholder { color: #707070; }
+    .icon-button, .send { width: 46px; height: 46px; flex-shrink: 0; border: 0; border-radius: 13px; cursor: pointer; }
+    .icon-button { background: #292929; color: #ddd; font-size: 22px; }
+    .icon-button:hover { background: #353535; }
+    .send { background: #e3fc02; color: #090909; font-size: 20px; font-weight: 900; }
+    .send:disabled { opacity: .4; cursor: not-allowed; }
+    .footer-text { text-align: center; color: #666; font-size: 10px; padding-top: 8px; }
+    @media (max-width: 700px) {
+      body { padding: 0; }
+      .app { height: 100vh; border: 0; border-radius: 0; }
+      .header { padding: 14px; }
+      .small-button { padding: 8px 9px; font-size: 11px; }
+      .chat { padding: 16px 12px; }
+      .suggestions { grid-template-columns: 1fr; }
+      .message-wrap { max-width: 92%; }
+      .tool-card { grid-template-columns: 85px 1fr; }
+      .tool-card-image { width: 85px; height: 75px; }
+      .composer-area { padding: 10px; }
     }
-
-    .icon-button,
-    .send {
-      width: 46px;
-      height: 46px;
-
-      flex-shrink: 0;
-
-      border: 0;
-
-      border-radius: 13px;
-
-      cursor: pointer;
-    }
-
-    .icon-button {
-      background:
-        #292929;
-
-      color:
-        #dddddd;
-
-      font-size: 22px;
-    }
-
-    .icon-button:hover {
-      background:
-        #353535;
-    }
-
-    .send {
-      background:
-        #e3fc02;
-
-      color:
-        #090909;
-
-      font-size: 20px;
-      font-weight: 900;
-    }
-
-    .send:disabled {
-      opacity: .4;
-
-      cursor:
-        not-allowed;
-    }
-
-    .footer-text {
-      text-align: center;
-
-      color:
-        #666666;
-
-      font-size: 10px;
-
-      padding-top: 8px;
-    }
-
-    @media (
-      max-width: 700px
-    ) {
-
-      body {
-        padding: 0;
-      }
-
-      .app {
-        height: 100vh;
-
-        border: 0;
-        border-radius: 0;
-      }
-
-      .header {
-        padding: 14px;
-      }
-
-      .small-button {
-        padding:
-          8px 9px;
-
-        font-size: 11px;
-      }
-
-      .chat {
-        padding:
-          16px 12px;
-      }
-
-      .suggestions {
-        grid-template-columns:
-          1fr;
-      }
-
-      .message {
-        max-width: 90%;
-      }
-
-      .tool-card {
-        grid-template-columns:
-          85px 1fr;
-      }
-
-      .tool-card-image {
-        width: 85px;
-        height: 75px;
-      }
-
-      .composer-area {
-        padding: 10px;
-      }
-
-    }
-
   </style>
-
 </head>
-
 <body>
-
 <main class="app">
-
   <header class="header">
-
     <div class="brand">
-
-      <div class="logo">
-        N
-      </div>
-
+      <div class="logo">N</div>
       <div>
-
-        <h1>
-          NOVAGE AI
-        </h1>
-
-        <p>
-          Asistente del Taller Digital
-        </p>
-
+        <h1>NOVAGE AI</h1>
+        <p>Luna • Asistente del Taller Digital</p>
       </div>
-
     </div>
-
-    <div class="header-actions">
-
-      <button
-        class="small-button"
-        id="newChat"
-      >
-        Nueva conversación
-      </button>
-
-    </div>
-
+    <button class="small-button" id="newChat">Nueva conversación</button>
   </header>
 
-  <section
-    class="chat"
-    id="chat"
-  >
-
-    <div
-      class="welcome"
-      id="welcome"
-    >
-
+  <section class="chat" id="chat">
+    <div class="welcome" id="welcome">
       <div class="welcome-inner">
-
-        <div class="welcome-icon">
-          ✦
-        </div>
-
-        <h2>
-          ¿En qué puedo ayudarte?
-        </h2>
-
-        <p>
-          Pregunta sobre DTF,
-          herramientas del Taller Digital
-          o sube tu diseño para analizarlo.
-        </p>
-
+        <div class="welcome-icon">✦</div>
+        <h2>¿En qué puedo ayudarte?</h2>
+        <p>Cuéntame tu problema. Luna puede hacerte preguntas para descartar causas antes de recomendar una solución.</p>
         <div class="suggestions">
-
-          <button
-            class="suggestion"
-            data-message="Mi diseño está pixelado, ¿qué herramienta del Taller debería usar?"
-          >
-            Mi diseño está pixelado
-          </button>
-
-          <button
-            class="suggestion"
-            data-message="Mi diseño tiene bordes blancos después de quitar el fondo. ¿Cómo lo corrijo?"
-          >
-            Tengo bordes blancos
-          </button>
-
-          <button
-            class="suggestion"
-            data-message="¿Cómo preparo correctamente un diseño para imprimirlo en DTF?"
-          >
-            Preparar diseño para DTF
-          </button>
-
-          <button
-            class="suggestion"
-            data-message="¿Qué tamaño debería utilizar para mi estampado?"
-          >
-            ¿Qué medidas uso?
-          </button>
-
+          <button class="suggestion" data-message="Mi diseño tiene bordes blancos después de imprimir. Ayúdame a encontrar la causa.">Tengo bordes blancos</button>
+          <button class="suggestion" data-message="Tengo un diseño pixelado. Ayúdame a decidir si debo mejorarlo o vectorizarlo.">Mi diseño está pixelado</button>
+          <button class="suggestion" data-message="Tengo semitransparencias en mi diseño. ¿Cuál es el flujo correcto dentro de NOVAGE?">Tengo semitransparencias</button>
+          <button class="suggestion" data-message="Quiero preparar correctamente mi archivo final antes de mandarlo a imprimir en DTF.">Revisar archivo para DTF</button>
         </div>
-
       </div>
-
     </div>
-
   </section>
 
   <div class="composer-area">
-
-    <div
-      class="image-preview"
-      id="imagePreview"
-    >
-
-      <img
-        id="previewImg"
-        alt="Diseño seleccionado"
-      >
-
-      <button
-        class="remove-image"
-        id="removeImage"
-        aria-label="Quitar imagen"
-      >
-        ×
-      </button>
-
+    <div class="image-preview" id="imagePreview">
+      <img id="previewImg" alt="Diseño seleccionado" />
+      <button class="remove-image" id="removeImage" aria-label="Quitar imagen">×</button>
     </div>
-
     <div class="composer">
-
-      <input
-        type="file"
-        id="imageInput"
-        accept="image/png,image/jpeg,image/webp"
-        hidden
-      >
-
-      <button
-        class="icon-button"
-        id="attachButton"
-        title="Subir diseño"
-        aria-label="Subir diseño"
-      >
-        +
-      </button>
-
-      <textarea
-        id="input"
-        rows="1"
-        placeholder="Pregúntale algo a NOVAGE AI..."
-      ></textarea>
-
-      <button
-        class="send"
-        id="send"
-        aria-label="Enviar"
-      >
-        ↑
-      </button>
-
+      <input type="file" id="imageInput" accept="image/png,image/jpeg,image/webp" hidden />
+      <button class="icon-button" id="attachButton" title="Subir diseño" aria-label="Subir diseño">+</button>
+      <textarea id="input" rows="1" placeholder="Cuéntale tu problema a Luna..."></textarea>
+      <button class="send" id="send" aria-label="Enviar">↑</button>
     </div>
-
-    <div class="footer-text">
-      NOVAGE AI puede cometer errores.
-      Verifica información importante.
-    </div>
-
+    <div class="footer-text">Luna puede cometer errores. Verifica información importante y confirma si la solución resolvió tu caso.</div>
   </div>
-
 </main>
 
 <script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendButton = document.getElementById("send");
+const imageInput = document.getElementById("imageInput");
+const attachButton = document.getElementById("attachButton");
+const imagePreview = document.getElementById("imagePreview");
+const previewImg = document.getElementById("previewImg");
+const removeImage = document.getElementById("removeImage");
+const newChat = document.getElementById("newChat");
 
-const chat =
-  document.getElementById(
-    "chat"
-  );
-
-const input =
-  document.getElementById(
-    "input"
-  );
-
-const sendButton =
-  document.getElementById(
-    "send"
-  );
-
-const imageInput =
-  document.getElementById(
-    "imageInput"
-  );
-
-const attachButton =
-  document.getElementById(
-    "attachButton"
-  );
-
-const imagePreview =
-  document.getElementById(
-    "imagePreview"
-  );
-
-const previewImg =
-  document.getElementById(
-    "previewImg"
-  );
-
-const removeImage =
-  document.getElementById(
-    "removeImage"
-  );
-
-const newChat =
-  document.getElementById(
-    "newChat"
-  );
-
-let previousResponseId =
-  sessionStorage.getItem(
-    "novage_previous_response"
-  ) || null;
-
+let previousResponseId = sessionStorage.getItem("novage_previous_response") || null;
 let selectedImage = null;
 let enviando = false;
+let conversation = loadJSON("novage_conversation", []);
+let feedbackDone = new Set(loadJSON("novage_feedback_done", []));
 
 const NOVAGE_TOOLS = {
-
   "Guía del Taller Digital": {
-    url:
-      "https://novage.store/pages/guia-del-taller-digital",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/guia_dtf.png?v=1777319095",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7651803380716752149"
+    url: "https://novage.store/pages/guia-del-taller-digital",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/guia_dtf.png?v=1777319095",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7651803380716752149"
   },
-
   "Mejorador con IA": {
-    url:
-      "https://novage.store/pages/mejorador-con-ia",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/Mejoradores_de_Imagen.png?v=1784443689"
+    url: "https://novage.store/pages/mejorador-con-ia",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/Mejoradores_de_Imagen.png?v=1784443689"
   },
-
   "Mejorador NOVAGE": {
-    url:
-      "https://novage.store/pages/mejorador-novage",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/Mejoradores_de_Imagen.png?v=1784443689"
+    url: "https://novage.store/pages/mejorador-novage",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/Mejoradores_de_Imagen.png?v=1784443689"
   },
-
   "Eliminador de Fondos": {
-    url:
-      "https://novage.store/pages/eliminador-de-fondos",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/eliminador_de_fondos.png?v=1777319093",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7588683520378178836"
+    url: "https://novage.store/pages/eliminador-de-fondos",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/eliminador_de_fondos.png?v=1777319093",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7588683520378178836"
   },
-
   "Semitonos": {
-    url:
-      "https://novage.store/pages/semitonos",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/semitonos.png?v=1777319094",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7650679999514676500"
+    url: "https://novage.store/pages/semitonos",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/semitonos.png?v=1777319094",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7650679999514676500"
   },
-
   "Semitransparencias": {
-    url:
-      "https://novage.store/pages/semitransparencias",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/semitransparencias.png?v=1777319094",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7586838282416196884"
+    url: "https://novage.store/pages/semitransparencias",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/semitransparencias.png?v=1777319094",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7586838282416196884"
   },
-
   "Contraer Bordes": {
-    url:
-      "https://novage.store/pages/reducir-bordes",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/bordes_blancos.png?v=1777319093"
+    url: "https://novage.store/pages/reducir-bordes",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/bordes_blancos.png?v=1777319093"
   },
-
   "Redimensionador": {
-    url:
-      "https://novage.store/pages/redimensionar",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/escalador.png?v=1777319093"
+    url: "https://novage.store/pages/redimensionar",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/escalador.png?v=1777319093"
   },
-
   "Armador de Plantilla DTF": {
-    url:
-      "https://novage.store/pages/armar-plantilla-dtf",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/armador_de_plantilla.png?v=1777319093",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7646611040980962580"
+    url: "https://novage.store/pages/armar-plantilla-dtf",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/armador_de_plantilla.png?v=1777319093",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7646611040980962580"
   },
-
   "Mockups": {
-    url:
-      "https://novage.store/pages/mockups",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/mockups.png?v=1777319093",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7577566917402152199"
+    url: "https://novage.store/pages/mockups",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/mockups.png?v=1777319093",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7577566917402152199"
   },
-
   "Pedrería": {
-    url:
-      "https://novage.store/pages/pedreria",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/pedreria.png?v=1777319092",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7600942381835341076"
+    url: "https://novage.store/pages/pedreria",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/pedreria.png?v=1777319092",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7600942381835341076"
   },
-
   "Calculadora de Precios": {
-    url:
-      "https://novage.store/pages/calculadora",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/precios.png?v=1777319093",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7572012783076773128"
+    url: "https://novage.store/pages/calculadora",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/precios.png?v=1777319093",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7572012783076773128"
   },
-
   "Escáner DTF": {
-    url:
-      "https://novage.store/pages/escaner-dtf",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/escaner_dtf.png?v=1777319093",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7624449121830866196"
+    url: "https://novage.store/pages/escaner-dtf",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/escaner_dtf.png?v=1777319093",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7624449121830866196"
   },
-
   "DTF + Pedrería": {
-    url:
-      "https://novage.store/pages/dtf-con-pedreria",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES.png?v=1777613328",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7645836367422868757"
+    url: "https://novage.store/pages/dtf-con-pedreria",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES.png?v=1777613328",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7645836367422868757"
   },
-
   "Conversor de Archivos": {
-    url:
-      "https://novage.store/pages/conversor-de-archivos",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_1.png?v=1777613648"
+    url: "https://novage.store/pages/conversor-de-archivos",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_1.png?v=1777613648"
   },
-
   "Guía de Medidas": {
-    url:
-      "https://novage.store/pages/guia-de-medidas",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_2.png?v=1778226626",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7637688530319281428"
+    url: "https://novage.store/pages/guia-de-medidas",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_2.png?v=1778226626",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7637688530319281428"
   },
-
   "DTF con Vinil": {
-    url:
-      "https://novage.store/pages/dtf-con-vinil",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_3.png?v=1778877357",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7644355381778566421"
+    url: "https://novage.store/pages/dtf-con-vinil",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_3.png?v=1778877357",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7644355381778566421"
   },
-
   "Marcos Grunge": {
-    url:
-      "https://novage.store/pages/marcos-grunge",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_3_7211c62c-1d7c-4edc-860c-d33286e6d49b.png?v=1778955861",
-
-    video:
-      "https://www.tiktok.com/@alexis_nvg/video/7643252289372966164"
+    url: "https://novage.store/pages/marcos-grunge",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/HERRAMIENTAS_IMAGENES_3_7211c62c-1d7c-4edc-860c-d33286e6d49b.png?v=1778955861",
+    video: "https://www.tiktok.com/@alexis_nvg/video/7643252289372966164"
   },
-
   "Vectorizador NOVAGE": {
-    url:
-      "https://novage.store/pages/vectorizador",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/Vectorizador_Imagen.png?v=1784442724"
+    url: "https://novage.store/pages/vectorizador",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/Vectorizador_Imagen.png?v=1784442724"
   },
-
   "Semitonos Fáciles": {
-    url:
-      "https://novage.store/pages/semitono-facil",
-
-    image:
-      "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/semitonos_faciles-taller.png?v=1787782612"
+    url: "https://novage.store/pages/semitono-facil",
+    image: "https://cdn.shopify.com/s/files/1/0919/8462/5952/files/semitonos_faciles-taller.png?v=1787782612"
   }
-
 };
 
-function esconderWelcome() {
-
-  document
-    .getElementById(
-      "welcome"
-    )
-    ?.remove();
-
+function loadJSON(key, fallback) {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(key));
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
+
+function saveConversation() {
+  sessionStorage.setItem("novage_conversation", JSON.stringify(conversation.slice(-30)));
+}
+
+function saveFeedbackDone() {
+  sessionStorage.setItem("novage_feedback_done", JSON.stringify([...feedbackDone]));
+}
+
+function esconderWelcome() { document.getElementById("welcome")?.remove(); }
 
 function escapeHTML(text) {
-
-  const div =
-    document.createElement(
-      "div"
-    );
-
-  div.textContent =
-    text;
-
+  const div = document.createElement("div");
+  div.textContent = text;
   return div.innerHTML;
-
 }
 
-function detectarHerramientas(
-  texto
-) {
-
-  const regex =
-    /\[HERRAMIENTA:\s*([^\]]+)\]/gi;
-
+function detectarHerramientas(texto) {
+  const regex = /\[HERRAMIENTA:\s*([^\]]+)\]/gi;
   const nombres = [];
-
   let match;
-
-  while (
-    (
-      match =
-        regex.exec(texto)
-    ) !== null
-  ) {
-
-    const nombre =
-      match[1].trim();
-
-    if (
-      NOVAGE_TOOLS[nombre] &&
-      !nombres.includes(
-        nombre
-      )
-    ) {
-
-      nombres.push(
-        nombre
-      );
-
-    }
-
+  while ((match = regex.exec(texto)) !== null) {
+    const nombre = match[1].trim();
+    if (NOVAGE_TOOLS[nombre] && !nombres.includes(nombre)) nombres.push(nombre);
   }
-
   return nombres;
-
 }
 
-function limpiarMarcadores(
-  texto
-) {
+function detectarEstado(texto) {
+  const match = texto.match(/\[ESTADO:\s*(PREGUNTA|SOLUCION)\]/i);
+  return match ? match[1].toUpperCase() : null;
+}
 
+function limpiarMarcadores(texto) {
   return texto
-    .replace(
-      /\[HERRAMIENTA:\s*[^\]]+\]/gi,
-      ""
-    )
+    .replace(/\[HERRAMIENTA:\s*[^\]]+\]/gi, "")
+    .replace(/\[ESTADO:\s*(?:PREGUNTA|SOLUCION)\]/gi, "")
     .trim();
-
 }
 
-function formatoTexto(
-  texto
-) {
-
-  let seguro =
-    escapeHTML(texto);
-
-  seguro =
-    seguro.replace(
-      /\*\*(.*?)\*\*/g,
-      "<strong>$1</strong>"
-    );
-
-  seguro =
-    seguro.replace(
-      /\n/g,
-      "<br>"
-    );
-
-  return seguro;
-
+function formatoTexto(texto) {
+  return escapeHTML(texto)
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>");
 }
 
-function crearTarjetaHerramienta(
-  nombre
-) {
+function crearTarjetaHerramienta(nombre) {
+  const tool = NOVAGE_TOOLS[nombre];
+  if (!tool) return null;
 
-  const tool =
-    NOVAGE_TOOLS[nombre];
+  const card = document.createElement("div");
+  card.className = "tool-card";
 
-  if (!tool) {
-    return null;
-  }
+  const image = document.createElement("img");
+  image.className = "tool-card-image";
+  image.src = tool.image;
+  image.alt = nombre;
+  card.appendChild(image);
 
-  const card =
-    document.createElement(
-      "div"
-    );
+  const content = document.createElement("div");
+  content.className = "tool-card-content";
 
-  card.className =
-    "tool-card";
+  const title = document.createElement("div");
+  title.className = "tool-card-title";
+  title.textContent = nombre;
+  content.appendChild(title);
 
-  const image =
-    document.createElement(
-      "img"
-    );
+  const actions = document.createElement("div");
+  actions.className = "tool-card-actions";
 
-  image.className =
-    "tool-card-image";
-
-  image.src =
-    tool.image;
-
-  image.alt =
-    nombre;
-
-  card.appendChild(
-    image
-  );
-
-  const content =
-    document.createElement(
-      "div"
-    );
-
-  content.className =
-    "tool-card-content";
-
-  const title =
-    document.createElement(
-      "div"
-    );
-
-  title.className =
-    "tool-card-title";
-
-  title.textContent =
-    nombre;
-
-  content.appendChild(
-    title
-  );
-
-  const actions =
-    document.createElement(
-      "div"
-    );
-
-  actions.className =
-    "tool-card-actions";
-
-  const open =
-    document.createElement(
-      "a"
-    );
-
-  open.href =
-    tool.url;
-
-  open.target =
-    "_blank";
-
-  open.rel =
-    "noopener noreferrer";
-
-  open.className =
-    "tool-button primary";
-
-  open.textContent =
-    "Abrir herramienta";
-
-  actions.appendChild(
-    open
-  );
+  const open = document.createElement("a");
+  open.href = tool.url;
+  open.target = "_blank";
+  open.rel = "noopener noreferrer";
+  open.className = "tool-button primary";
+  open.textContent = "Abrir herramienta";
+  actions.appendChild(open);
 
   if (tool.video) {
-
-    const tutorial =
-      document.createElement(
-        "a"
-      );
-
-    tutorial.href =
-      tool.video;
-
-    tutorial.target =
-      "_blank";
-
-    tutorial.rel =
-      "noopener noreferrer";
-
-    tutorial.className =
-      "tool-button secondary";
-
-    tutorial.textContent =
-      "Ver tutorial";
-
-    actions.appendChild(
-      tutorial
-    );
-
+    const tutorial = document.createElement("a");
+    tutorial.href = tool.video;
+    tutorial.target = "_blank";
+    tutorial.rel = "noopener noreferrer";
+    tutorial.className = "tool-button secondary";
+    tutorial.textContent = "Ver tutorial";
+    actions.appendChild(tutorial);
   }
 
-  content.appendChild(
-    actions
-  );
-
-  card.appendChild(
-    content
-  );
-
+  content.appendChild(actions);
+  card.appendChild(content);
   return card;
-
 }
 
-function agregarMensaje(
-  tipo,
-  texto,
-  imagen = null
-) {
+function getConversationUntil(responseId) {
+  const index = conversation.findIndex((item) => item.role === "assistant" && item.responseId === responseId);
+  if (index === -1) return conversation.slice(-24);
+  return conversation.slice(0, index + 1).slice(-24);
+}
 
+function crearFeedback(responseId) {
+  const box = document.createElement("div");
+  box.className = "feedback";
+
+  if (feedbackDone.has(responseId)) {
+    box.innerHTML = '<div class="feedback-status">Gracias por tu valoración.</div>';
+    return box;
+  }
+
+  const question = document.createElement("div");
+  question.className = "feedback-question";
+  question.textContent = "¿Esto solucionó tu problema?";
+  box.appendChild(question);
+
+  const actions = document.createElement("div");
+  actions.className = "feedback-actions";
+
+  const yes = document.createElement("button");
+  yes.className = "feedback-btn";
+  yes.textContent = "👍 Sí, me ayudó";
+
+  const no = document.createElement("button");
+  no.className = "feedback-btn";
+  no.textContent = "👎 No lo solucionó";
+
+  actions.appendChild(yes);
+  actions.appendChild(no);
+  box.appendChild(actions);
+
+  async function sendFeedback(helpful) {
+    yes.disabled = true;
+    no.disabled = true;
+
+    const status = document.createElement("div");
+    status.className = "feedback-status";
+    status.textContent = helpful ? "Guardando el caso resuelto..." : "Gracias. Luna seguirá diagnosticando.";
+    actions.replaceWith(status);
+
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          helpful,
+          responseId,
+          conversation: getConversationUntil(responseId)
+        })
+      });
+      const data = await response.json();
+
+      feedbackDone.add(responseId);
+      saveFeedbackDone();
+
+      if (!response.ok) throw new Error(data.details || data.error || "No se pudo registrar la valoración.");
+
+      if (helpful) {
+        status.className = "feedback-status success";
+        status.textContent = "✓ Gracias. Este caso quedó guardado como experiencia confirmada para ayudar en problemas similares.";
+      } else {
+        status.textContent = "Gracias. No guardaré esta respuesta como solución. Luna te hará más preguntas.";
+        setTimeout(() => {
+          enviarMensaje("La solución anterior no resolvió mi problema. Antes de dar otro diagnóstico, hazme las preguntas necesarias para descartar otras causas.");
+        }, 500);
+      }
+    } catch (error) {
+      console.error(error);
+      status.textContent = "No pude registrar la valoración. Puedes seguir hablando con Luna normalmente.";
+    }
+  }
+
+  yes.addEventListener("click", () => sendFeedback(true));
+  no.addEventListener("click", () => sendFeedback(false));
+  return box;
+}
+
+function renderMensaje(tipo, texto, imagen = null, responseId = null) {
   esconderWelcome();
 
-  const row =
-    document.createElement(
-      "div"
-    );
+  const row = document.createElement("div");
+  row.className = `message-row ${tipo}`;
 
-  row.className =
-    `message-row ${tipo}`;
+  const wrap = document.createElement("div");
+  wrap.className = "message-wrap";
 
-  const bubble =
-    document.createElement(
-      "div"
-    );
-
-  bubble.className =
-    `message ${tipo}`;
+  const bubble = document.createElement("div");
+  bubble.className = `message ${tipo}`;
 
   if (imagen) {
-
-    const img =
-      document.createElement(
-        "img"
-      );
-
-    img.src =
-      imagen;
-
-    img.className =
-      "message-image";
-
-    bubble.appendChild(
-      img
-    );
-
+    const img = document.createElement("img");
+    img.src = imagen;
+    img.className = "message-image";
+    bubble.appendChild(img);
   }
 
-  const herramientas =
-    tipo === "ai"
-      ? detectarHerramientas(
-          texto
-        )
-      : [];
+  const herramientas = tipo === "ai" ? detectarHerramientas(texto) : [];
+  const estado = tipo === "ai" ? detectarEstado(texto) : null;
+  const textoLimpio = tipo === "ai" ? limpiarMarcadores(texto) : texto;
 
-  const textoLimpio =
-    tipo === "ai"
-      ? limpiarMarcadores(
-          texto
-        )
-      : texto;
+  const textoDiv = document.createElement("div");
+  textoDiv.innerHTML = formatoTexto(textoLimpio);
+  bubble.appendChild(textoDiv);
 
-  const textoDiv =
-    document.createElement(
-      "div"
-    );
-
-  textoDiv.innerHTML =
-    formatoTexto(
-      textoLimpio
-    );
-
-  bubble.appendChild(
-    textoDiv
-  );
-
-  if (
-    tipo === "ai" &&
-    herramientas.length
-  ) {
-
-    const cards =
-      document.createElement(
-        "div"
-      );
-
-    cards.className =
-      "tool-cards";
-
-    herramientas.forEach(
-      (nombre) => {
-
-        const card =
-          crearTarjetaHerramienta(
-            nombre
-          );
-
-        if (card) {
-          cards.appendChild(
-            card
-          );
-        }
-
-      }
-    );
-
-    bubble.appendChild(
-      cards
-    );
-
+  if (tipo === "ai" && herramientas.length) {
+    const cards = document.createElement("div");
+    cards.className = "tool-cards";
+    herramientas.forEach((nombre) => {
+      const card = crearTarjetaHerramienta(nombre);
+      if (card) cards.appendChild(card);
+    });
+    bubble.appendChild(cards);
   }
 
-  row.appendChild(
-    bubble
-  );
+  wrap.appendChild(bubble);
 
-  chat.appendChild(
-    row
-  );
+  if (tipo === "ai" && estado === "SOLUCION" && responseId) {
+    wrap.appendChild(crearFeedback(responseId));
+  }
 
-  chat.scrollTop =
-    chat.scrollHeight;
-
+  row.appendChild(wrap);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
 }
 
 function agregarTyping() {
-
   esconderWelcome();
-
-  const row =
-    document.createElement(
-      "div"
-    );
-
-  row.className =
-    "message-row ai";
-
-  row.id =
-    "typing";
-
-  row.innerHTML = `
-    <div class="message ai">
-      <div class="typing">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </div>
-  `;
-
-  chat.appendChild(
-    row
-  );
-
-  chat.scrollTop =
-    chat.scrollHeight;
-
+  const row = document.createElement("div");
+  row.className = "message-row ai";
+  row.id = "typing";
+  row.innerHTML = '<div class="message-wrap"><div class="message ai"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
 }
 
-function quitarTyping() {
-
-  document
-    .getElementById(
-      "typing"
-    )
-    ?.remove();
-
-}
+function quitarTyping() { document.getElementById("typing")?.remove(); }
 
 function limpiarImagen() {
-
-  selectedImage =
-    null;
-
-  imageInput.value =
-    "";
-
-  imagePreview.style.display =
-    "none";
-
-  previewImg.src =
-    "";
-
+  selectedImage = null;
+  imageInput.value = "";
+  imagePreview.style.display = "none";
+  previewImg.src = "";
 }
 
-function comprimirImagen(
-  file
-) {
+function comprimirImagen(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1800;
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX || height > MAX) {
+          const ratio = Math.min(MAX / width, MAX / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
 
-  return new Promise(
-    (
-      resolve,
-      reject
-    ) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
 
-      const reader =
-        new FileReader();
-
-      reader.onload =
-        () => {
-
-          const img =
-            new Image();
-
-          img.onload =
-            () => {
-
-              const MAX =
-                1800;
-
-              let width =
-                img.width;
-
-              let height =
-                img.height;
-
-              if (
-                width > MAX ||
-                height > MAX
-              ) {
-
-                const ratio =
-                  Math.min(
-                    MAX / width,
-                    MAX / height
-                  );
-
-                width =
-                  Math.round(
-                    width *
-                      ratio
-                  );
-
-                height =
-                  Math.round(
-                    height *
-                      ratio
-                  );
-
-              }
-
-              const canvas =
-                document.createElement(
-                  "canvas"
-                );
-
-              canvas.width =
-                width;
-
-              canvas.height =
-                height;
-
-              const ctx =
-                canvas.getContext(
-                  "2d"
-                );
-
-              ctx.drawImage(
-                img,
-                0,
-                0,
-                width,
-                height
-              );
-
-              const data =
-                canvas.toDataURL(
-                  "image/jpeg",
-                  .88
-                );
-
-              resolve(
-                data
-              );
-
-            };
-
-          img.onerror =
-            reject;
-
-          img.src =
-            reader.result;
-
-        };
-
-      reader.onerror =
-        reject;
-
-      reader.readAsDataURL(
-        file
-      );
-
-    }
-  );
-
+        if (file.type === "image/png") {
+          resolve(canvas.toDataURL("image/png"));
+        } else if (file.type === "image/webp") {
+          resolve(canvas.toDataURL("image/webp", 0.88));
+        } else {
+          resolve(canvas.toDataURL("image/jpeg", 0.88));
+        }
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
-async function cargarImagen(
-  file
-) {
-
+async function cargarImagen(file) {
   if (!file) return;
-
-  if (
-    ![
-      "image/png",
-      "image/jpeg",
-      "image/webp"
-    ].includes(
-      file.type
-    )
-  ) {
-
-    alert(
-      "Sube una imagen PNG, JPG o WEBP."
-    );
-
+  if (!["image/png","image/jpeg","image/webp"].includes(file.type)) {
+    alert("Sube una imagen PNG, JPG o WEBP.");
     return;
-
   }
-
-  if (
-    file.size >
-    15 *
-      1024 *
-      1024
-  ) {
-
-    alert(
-      "La imagen es demasiado grande. Máximo 15 MB."
-    );
-
+  if (file.size > 15 * 1024 * 1024) {
+    alert("La imagen es demasiado grande. Máximo 15 MB.");
     return;
-
   }
 
   try {
-
-    selectedImage =
-      await comprimirImagen(
-        file
-      );
-
-    previewImg.src =
-      selectedImage;
-
-    imagePreview.style.display =
-      "block";
-
+    selectedImage = await comprimirImagen(file);
+    previewImg.src = selectedImage;
+    imagePreview.style.display = "block";
   } catch (error) {
-
-    console.error(
-      error
-    );
-
-    alert(
-      "No se pudo cargar la imagen."
-    );
-
+    console.error(error);
+    alert("No se pudo cargar la imagen.");
   }
-
 }
 
-async function enviarMensaje(
-  mensajeManual = null
-) {
+async function enviarMensaje(mensajeManual = null) {
+  if (enviando) return;
 
-  if (enviando) {
-    return;
-  }
+  const mensaje = (mensajeManual ?? input.value).trim();
+  if (!mensaje && !selectedImage) return;
 
-  const mensaje =
-    (
-      mensajeManual ??
-      input.value
-    ).trim();
-
-  if (
-    !mensaje &&
-    !selectedImage
-  ) {
-    return;
-  }
-
-  const imagenActual =
-    selectedImage;
-
-  const textoUsuario =
-    mensaje ||
-    "Analiza este diseño para DTF y dime qué herramientas de NOVAGE debería utilizar.";
+  const imagenActual = selectedImage;
+  const textoUsuario = mensaje || "Analiza esta imagen y ayúdame a diagnosticar el problema antes de recomendar una solución.";
 
   enviando = true;
+  sendButton.disabled = true;
 
-  sendButton.disabled =
-    true;
+  renderMensaje("user", textoUsuario, imagenActual);
+  conversation.push({ role: "user", text: textoUsuario, hasImage: Boolean(imagenActual) });
+  saveConversation();
 
-  agregarMensaje(
-    "user",
-    textoUsuario,
-    imagenActual
-  );
-
-  input.value =
-    "";
-
+  input.value = "";
   ajustarTextarea();
-
   limpiarImagen();
-
   agregarTyping();
 
   try {
-
-    const response =
-      await fetch(
-        "/api/novage-ai",
-        {
-          method:
-            "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body:
-            JSON.stringify({
-              mensaje:
-                textoUsuario,
-
-              imagen:
-                imagenActual,
-
-              previousResponseId:
-                previousResponseId
-            })
-        }
-      );
-
-    const data =
-      await response.json();
-
-    quitarTyping();
-
-    if (!response.ok) {
-
-      throw new Error(
-        data.details ||
-        data.error ||
-        "No se pudo generar una respuesta."
-      );
-
-    }
-
-    if (
-      data.responseId
-    ) {
-
-      previousResponseId =
-        data.responseId;
-
-      sessionStorage.setItem(
-        "novage_previous_response",
+    const response = await fetch("/api/novage-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mensaje: textoUsuario,
+        imagen: imagenActual,
         previousResponseId
-      );
+      })
+    });
 
-    }
-
-    agregarMensaje(
-      "ai",
-      data.respuesta ||
-      "No pude generar una respuesta."
-    );
-
-  } catch (error) {
-
+    const data = await response.json();
     quitarTyping();
 
-    console.error(
-      error
-    );
+    if (!response.ok) throw new Error(data.details || data.error || "No se pudo generar una respuesta.");
 
-    agregarMensaje(
-      "ai",
-      error.message ||
-      "Ocurrió un error al conectar con NOVAGE AI."
-    );
+    if (data.responseId) {
+      previousResponseId = data.responseId;
+      sessionStorage.setItem("novage_previous_response", previousResponseId);
+    }
 
+    const answer = data.respuesta || "No pude generar una respuesta.";
+    conversation.push({
+      role: "assistant",
+      text: answer,
+      hasImage: false,
+      responseId: data.responseId || null
+    });
+    saveConversation();
+    renderMensaje("ai", answer, null, data.responseId || null);
+  } catch (error) {
+    quitarTyping();
+    console.error(error);
+    renderMensaje("ai", error.message || "Ocurrió un error al conectar con Luna.");
   } finally {
-
-    enviando =
-      false;
-
-    sendButton.disabled =
-      false;
-
+    enviando = false;
+    sendButton.disabled = false;
     input.focus();
-
   }
-
 }
 
 function ajustarTextarea() {
-
-  input.style.height =
-    "auto";
-
-  input.style.height =
-    Math.min(
-      input.scrollHeight,
-      150
-    ) + "px";
-
+  input.style.height = "auto";
+  input.style.height = Math.min(input.scrollHeight, 150) + "px";
 }
 
-attachButton.addEventListener(
-  "click",
-  () => {
+function restaurarConversacion() {
+  if (!conversation.length) return;
+  esconderWelcome();
+  conversation.forEach((item) => {
+    renderMensaje(item.role === "assistant" ? "ai" : "user", item.text, null, item.responseId || null);
+  });
+}
 
-    imageInput.click();
-
-  }
-);
-
-imageInput.addEventListener(
-  "change",
-  (event) => {
-
-    cargarImagen(
-      event.target.files[0]
-    );
-
-  }
-);
-
-removeImage.addEventListener(
-  "click",
-  limpiarImagen
-);
-
-sendButton.addEventListener(
-  "click",
-  () => {
-
+attachButton.addEventListener("click", () => imageInput.click());
+imageInput.addEventListener("change", (event) => cargarImagen(event.target.files[0]));
+removeImage.addEventListener("click", limpiarImagen);
+sendButton.addEventListener("click", () => enviarMensaje());
+input.addEventListener("input", ajustarTextarea);
+input.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
     enviarMensaje();
-
   }
-);
+});
 
-input.addEventListener(
-  "input",
-  ajustarTextarea
-);
+document.querySelectorAll(".suggestion").forEach((button) => {
+  button.addEventListener("click", () => enviarMensaje(button.dataset.message));
+});
 
-input.addEventListener(
-  "keydown",
-  (event) => {
+newChat.addEventListener("click", () => {
+  previousResponseId = null;
+  conversation = [];
+  feedbackDone = new Set();
+  sessionStorage.removeItem("novage_previous_response");
+  sessionStorage.removeItem("novage_conversation");
+  sessionStorage.removeItem("novage_feedback_done");
+  window.location.reload();
+});
 
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
-
-      event.preventDefault();
-
-      enviarMensaje();
-
-    }
-
-  }
-);
-
-document
-  .querySelectorAll(
-    ".suggestion"
-  )
-  .forEach(
-    (button) => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          enviarMensaje(
-            button.dataset.message
-          );
-
-        }
-      );
-
-    }
-  );
-
-newChat.addEventListener(
-  "click",
-  () => {
-
-    previousResponseId =
-      null;
-
-    sessionStorage.removeItem(
-      "novage_previous_response"
-    );
-
-    window.location.reload();
-
-  }
-);
-
+restaurarConversacion();
 </script>
-
 </body>
 </html>
