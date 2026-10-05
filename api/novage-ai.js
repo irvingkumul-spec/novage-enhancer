@@ -1,8 +1,15 @@
+// NOVAGE AI • Luna • v4.2
+const KNOWLEDGE_VERSION = "v4.2";
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60 * 60 * 1000;
 const KNOWLEDGE_RESULTS = 7;
 const CASE_RESULTS = 5;
 const CASE_MIN_SCORE = 0.28;
+// Máximo de preguntas decisivas seguidas antes de obligar a resolver.
+const MAX_QUESTIONS_IN_ROW = 3;
+// Detecta color de prenda escrito en texto libre ("playera negra", "camisa de color blanco").
+const GARMENT_COLOR_REGEX =
+  /\b(playera|camiseta|camisa|prenda|sudadera|hoodie|polo|blusa|tela|gorra|bolsa)s?\s+(?:de\s+color\s+|color\s+)?(negr[ao]s?|blanc[ao]s?|gris(?:es)?|roj[ao]s?|azul(?:es)?|verdes?|amarill[ao]s?|rosas?|beige|crema|marino|vino|caf[eé])(?![a-záéíóúñ])/i;
 
 const usage = globalThis.__NOVAGE_AI_USAGE__ || new Map();
 globalThis.__NOVAGE_AI_USAGE__ = usage;
@@ -104,6 +111,10 @@ function extractText(data) {
 function parseJsonOutput(data, fallback = {}) {
   const raw = extractText(data);
 
+  if (data?.status === "incomplete") {
+    console.error("NOVAGE respuesta incompleta:", data?.incomplete_details);
+  }
+
   try {
     return JSON.parse(raw);
   } catch (error) {
@@ -139,6 +150,10 @@ function cleanConversationContext(value) {
         typeof item.decision.question === "string" &&
         Array.isArray(item.decision.options)
           ? {
+              key:
+                typeof item.decision.key === "string"
+                  ? item.decision.key.trim().slice(0, 80)
+                  : "",
               question: item.decision.question.trim().slice(0, 500),
               options: item.decision.options
                 .filter((x) => typeof x === "string")
@@ -174,23 +189,120 @@ function resolvedFactsFromText(text) {
   if (normalized.includes("pregunta: ¿cómo aparece el borde blanco en la impresión?")) facts.add("white_border_pattern");
   if (normalized.includes("pregunta: ¿qué tipo de diseño es?")) facts.add("design_type");
 
+  // Genérico: cualquier respuesta por botón incluye "Variable: <key>" (canónicas y personalizadas).
+  for (const match of normalized.matchAll(/^variable:\s*([a-z0-9_]+)\s*$/gm)) {
+    if (match[1] !== "unknown") facts.add(match[1]);
+  }
+
   return facts;
+}
+
+function parseDecisionAnswer(text) {
+  const value = String(text || "");
+  if (!/RESPUESTA A PREGUNTA DECISIVA/i.test(value)) return null;
+
+  const key = value.match(/^Variable:\s*(.+)$/im)?.[1]?.trim() || "";
+  const question = value.match(/^Pregunta:\s*(.+)$/im)?.[1]?.trim() || "";
+  const answer = value.match(/^Respuesta seleccionada por el cliente:\s*(.+)$/im)?.[1]?.trim() || "";
+
+  if (!question || !answer) return null;
+  return { key, question, answer };
+}
+
+// Recorre la conversación + mensaje actual como una sola lista de turnos.
+function allTurns(currentMessage, conversation) {
+  return [...conversation, { role: "user", text: currentMessage || "" }];
 }
 
 function collectResolvedFacts(currentMessage, conversation) {
   const facts = new Set();
-  const all = [currentMessage, ...conversation.map((item) => item.text || "")].join("\n");
+  const turns = allTurns(currentMessage, conversation);
+  const all = turns.map((item) => item.text || "").join("\n");
 
   for (const fact of resolvedFactsFromText(all)) facts.add(fact);
+
+  // Respuesta escrita a mano (sin botón) a una pregunta decisiva: también la resuelve.
+  for (let i = 1; i < turns.length; i += 1) {
+    const item = turns[i];
+    const prev = turns[i - 1];
+    if (
+      item.role === "user" &&
+      item.text &&
+      !parseDecisionAnswer(item.text) &&
+      prev?.role === "assistant" &&
+      prev.state === "question" &&
+      prev.decision?.key
+    ) {
+      facts.add(prev.decision.key);
+    }
+  }
+
+  // El cliente ya escribió el color de la prenda.
+  const userText = turns
+    .filter((item) => item.role === "user")
+    .map((item) => item.text || "")
+    .join("\n");
+  if (GARMENT_COLOR_REGEX.test(userText)) facts.add("garment_black");
+
   return facts;
 }
 
+// Hechos confirmados en lenguaje claro para que la solución NO los ignore.
+function buildConfirmedFacts(currentMessage, conversation) {
+  const facts = [];
+  const turns = allTurns(currentMessage, conversation);
+
+  for (let i = 0; i < turns.length; i += 1) {
+    const item = turns[i];
+    if (item.role !== "user" || !item.text) continue;
+
+    const parsed = parseDecisionAnswer(item.text);
+    if (parsed) {
+      facts.push(`- ${parsed.question} → ${parsed.answer}`);
+      continue;
+    }
+
+    const prev = turns[i - 1];
+    if (prev?.role === "assistant" && prev.state === "question" && prev.decision?.question) {
+      facts.push(`- ${prev.decision.question} → (respondió escribiendo) ${item.text.slice(0, 300)}`);
+    }
+  }
+
+  return [...new Set(facts)];
+}
+
+function questionsInRow(conversation) {
+  let count = 0;
+  for (let i = conversation.length - 1; i >= 0; i -= 1) {
+    const item = conversation[i];
+    if (item.role !== "assistant") continue;
+    if (item.state === "question") count += 1;
+    else break;
+  }
+  return count;
+}
+
+// Limpia el texto técnico de respuestas por botón para no ensuciar la búsqueda.
+function retrievalText(text) {
+  const parsed = parseDecisionAnswer(text);
+  if (parsed) return `${parsed.question} ${parsed.answer}`;
+  return String(text || "");
+}
+
 function buildRetrievalQuery(message, conversation) {
-  const recent = conversationAsText(conversation.slice(-8));
+  const firstUser = conversation.find((item) => item.role === "user");
+  const recent = conversation
+    .slice(-8)
+    .map(
+      (item) =>
+        `${item.role === "assistant" ? "LUNA" : "CLIENTE"}: ${retrievalText(item.text || item.displayText).slice(0, 700)}`
+    )
+    .join("\n");
 
   return [
     "Consulta actual del cliente:",
-    message,
+    retrievalText(message),
+    firstUser ? `\nProblema original:\n${retrievalText(firstUser.text).slice(0, 1500)}` : "",
     recent ? `\nContexto reciente:\n${recent}` : "",
     "\nBusca conocimiento útil para diagnosticar, elegir la técnica NOVAGE correcta y descartar causas."
   ]
@@ -277,8 +389,13 @@ function compactHitMetadata(results, minScore = 0) {
     }));
 }
 
-function buildSharedContext(officialContext, solvedCasesContext, conversation) {
+function buildSharedContext(officialContext, solvedCasesContext, conversation, confirmedFacts = []) {
   return `
+======================================================================
+HECHOS CONFIRMADOS POR EL CLIENTE (tienen prioridad, no los vuelvas a preguntar)
+======================================================================
+${confirmedFacts.length ? confirmedFacts.join("\n") : "Ninguno todavía."}
+
 ======================================================================
 CONTEXTO OFICIAL NOVAGE RECUPERADO
 ======================================================================
@@ -306,10 +423,23 @@ Devuelve un campo missing_fact usando SOLO uno de estos valores:
 - final_scan
 - white_border_pattern
 - design_type
+- custom   (pregunta personalizada, ver regla 7)
 - none
+
+Y clasifica case_type:
+- detailed_black_background: diseño detallado/texturizado donde el negro es parte de la composición.
+- white_border_print: bordes/halo blanco tras imprimir DTF.
+- pixelated_design: calidad, pixelado, mejorar vs vectorizar.
+- dtf_application: planchado/aplicación DTF, se despega, se agrieta, polvo, tacto, migración.
+- sublimation: sublimación (textil, tazas, rígidos): colores, ghosting, manchas, materiales.
+- vinyl: vinil textil/HTV, corte, depilado, adherencia.
+- file_preparation: fondos, semitransparencias, medidas, plantillas, formatos.
+- business: precios, costos, márgenes, venta.
+- other: saludo, pregunta general o fuera de tema.
 
 PRINCIPIO:
 Pregunta solo si la respuesta cambia realmente la ruta. Si Luna puede decidir técnicamente con lo que ve y sabe, devuelve none.
+Un asesor experto NO pregunta por preguntar: si con lo que ya sabes puedes dar la causa más probable y un plan, devuelve none.
 
 REGLAS OBLIGATORIAS:
 
@@ -344,33 +474,76 @@ Nunca intentes pedir dos datos en el mismo turno.
 
 6) SI NO FALTA UN DATO QUE CAMBIE LA RUTA
 missing_fact = none
+Preguntas teóricas ("¿qué es...?", "¿diferencia entre...?"), saludos y precios generales -> none.
 
-No escribas la pregunta al usuario. El servidor la generará de forma canónica.
+7) PREGUNTA PERSONALIZADA (custom)
+Usa missing_fact = custom SOLO cuando el caso NO encaja en las variables canónicas y existe UN dato que el cliente conoce, que tú no puedes observar ni deducir, y cuya respuesta cambia la causa o la ruta.
+Ejemplos válidos:
+- "Se me despegó el estampado" sin decir la técnica -> ¿Qué técnica usaste? | DTF | Sublimación | Vinil textil | Otra
+- DTF que se despega sin saber cuándo -> ¿Cuándo se despegó? | Al retirar el film | En el primer lavado | Tras varios lavados
+- Sublimación con colores apagados sin saber el material -> ¿De qué material es la prenda? | 100% poliéster | Mezcla con algodón | Algodón | No lo sé
+Reglas de custom:
+- custom_key: snake_case descriptivo y estable (ej. tecnica_usada, momento_despegue, material_prenda).
+- custom_question: una sola pregunta corta y clara para principiante.
+- custom_options: 2 a 4 opciones, máximo 5 palabras cada una.
+- custom_message: 1 o 2 frases en tono asesor NOVAGE explicando POR QUÉ ese dato cambia el diagnóstico. Sin listar todas las ramas.
+- Nunca preguntes qué herramienta o técnica QUIERE usar el cliente: eso lo decide Luna.
+Si missing_fact NO es custom: custom_key, custom_question y custom_message = "" y custom_options = [].
+
+8) DATOS DADOS EN TEXTO LIBRE
+Si el cliente ya escribió el dato (ej. "es para playera negra", "la armé en Canva", "es 100% poliéster"), considéralo resuelto aunque no haya usado botones.
+
+No escribas la pregunta canónica al usuario. El servidor la generará de forma canónica.
 `;
 
 const SOLUTION_INSTRUCTIONS = `
-Eres Luna, NOVAGE AI, especialista senior de NOVAGE en diseño gráfico aplicado a impresión, DTF, textiles, semitonos, semitransparencias, resolución, vectorización, fondos, contornos, plantillas y diagnóstico de errores.
+Eres Luna, asesora técnica senior de NOVAGE. Hablas como alguien que ha preparado e impreso miles de trabajos: DTF, sublimación, vinil textil, DTG, serigrafía básica, preparación de archivos, semitonos, semitransparencias, vectorización, fondos, plantillas y diagnóstico de errores de producción.
 
-El DECISION GATE ya determinó que existe información suficiente. NO hagas otra pregunta. Debes resolver.
+Tu trabajo NO es conversar: es DIAGNOSTICAR y decirle al cliente EXACTAMENTE qué hacer y cómo comprobarlo.
 
-MÉTODO:
-PROBLEMA -> OBSERVAR -> DESCARTAR -> DIAGNÓSTICO -> FLUJO NOVAGE -> SIGUIENTE PASO.
+El DECISION GATE ya determinó que existe información suficiente. NO hagas preguntas. Si falta un dato menor, decláralo como supuesto en una línea ("Asumo que ...; si no es así, dímelo y ajusto.") y resuelve igual.
 
-PRIORIDAD:
-1. Lo que observas en el archivo/imagen actual.
-2. Lo que el cliente ya confirmó.
+MÉTODO INTERNO (no lo escribas): OBSERVAR -> DESCARTAR -> DIAGNOSTICAR -> FLUJO -> COMPROBAR.
+
+PRIORIDAD DE EVIDENCIA:
+1. HECHOS CONFIRMADOS POR EL CLIENTE (sección del contexto). Nunca los contradigas ni los ignores.
+2. Lo que observas en la imagen adjunta (puede venir de un turno anterior de la conversación).
 3. Conocimiento oficial NOVAGE recuperado.
-4. Casos reales confirmados parecidos.
+4. Casos reales confirmados parecidos (solo si coinciden las señales clave).
 5. Conocimiento profesional general.
+
+FORMATO OBLIGATORIO del campo message (títulos en **negritas**, sin #, sin tablas, sin emojis):
+
+**Diagnóstico:** 1 a 3 frases. Causa más probable y POR QUÉ: qué señal concreta la delata. Si hay imagen, menciona algo específico que viste en ella.
+
+**Qué hacer:**
+1. Paso concreto que empieza con verbo (Sube, Descarga, Activa, Plancha, Revisa...). Nombra la herramienta NOVAGE o el ajuste exacto.
+2. ...
+(3 a 6 pasos, en el orden real de trabajo)
+
+**Cómo comprobarlo:** 1 o 2 frases con la prueba rápida que confirma que quedó bien ANTES de producir en serie.
+
+**Si no se corrige:** 1 frase con la siguiente causa más probable y qué revisar.
+
+EXCEPCIÓN: preguntas teóricas o simples ("¿qué es...?", "¿diferencia entre...?") se responden directo en 2 a 4 frases, sin el formato completo.
+
+TONO NOVAGE:
+- Tutea. Directa, segura, cercana, cero relleno. Como un maestro de taller que sabe y lo explica fácil.
+- Prohibido: "¡Claro!", "Excelente pregunta", "Espero que te sirva", "No dudes en...", "Como IA...", resumir lo que el cliente acaba de decir.
+- No uses "depende" sin decir de qué depende y cuál es tu recomendación.
+- Si el cliente propone una técnica inadecuada, corrígelo con el motivo técnico, sin regañar.
+
+PARÁMETROS DE PRODUCCIÓN (temperatura, tiempo, presión, despegue):
+- Da el RANGO DE REFERENCIA de la base de conocimiento como punto de partida.
+- Aclara en la misma frase que se confirma con la ficha técnica del proveedor del film/papel/vinil y recomienda una prueba en retazo.
+- Nunca te niegues a orientar y nunca presentes un rango como valor universal.
 
 REGLAS:
 - No le pidas al cliente que elija una técnica que tú puedes determinar.
-- Corrige al usuario si propone una técnica poco adecuada.
-- No inventes DPI, centímetros, resolución real, perfiles ni funciones no documentadas.
+- No inventes DPI, centímetros, resolución real, perfiles ni funciones de herramientas no documentadas.
 - No culpes a NOVAGE, cliente o imprenta sin descartar causas.
-- No repitas una solución que ya se indicó como fallida.
-- Da pasos en orden, concretos y accionables.
-- Usa herramientas NOVAGE solo cuando realmente ayudan.
+- Si el cliente dijo que una solución anterior NO funcionó: no la repitas; explica qué causa descarta ese resultado y pasa a la siguiente.
+- Usa herramientas NOVAGE solo cuando realmente ayudan; si el problema es de prensa o material, la solución puede no llevar herramienta.
 
 CASO CLAVE: DISEÑO DETALLADO DE INTERNET/PINTEREST CON FONDO NEGRO + PLAYERA NEGRA CONFIRMADA
 - No vectorizar como primera opción.
@@ -400,12 +573,11 @@ DIFERENCIAS CLAVE:
 - Guía de Medidas decide; Redimensionador aplica.
 - Semitonos Fáciles prioriza rapidez; Semitonos Profesionales mayor control.
 
-FORMATO:
-- Español natural, NOVAGE, directo.
-- 2 a 5 párrafos o una secuencia corta numerada.
-- No hagas preguntas en esta etapa.
-- El campo tools debe contener solo herramientas con tarjeta configurada.
-- Puedes mencionar Semitonos Profesionales en el texto aunque no exista tarjeta configurada.
+CAMPO tools:
+- Solo herramientas que aparecen en tus pasos, en el orden en que se usan, máximo 3.
+- Usa "Crear Plantilla DTF" (no "Armador de Plantilla DTF").
+- Si la solución no requiere herramienta NOVAGE, devuelve [].
+- Semitonos Profesionales puede mencionarse en el texto aunque no exista tarjeta configurada.
 `;
 
 async function callOpenAI(payload) {
@@ -427,12 +599,52 @@ async function callOpenAI(payload) {
   return data;
 }
 
-async function runDecisionGate({ message, image, sharedContext, resolvedFacts }) {
+function slugKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50);
+}
+
+// Valida la pregunta personalizada del Gate. Devuelve null si no sirve.
+function buildCustomDecision(parsed, resolvedFacts) {
+  const slug = slugKey(parsed?.custom_key);
+  const question = String(parsed?.custom_question || "").trim().slice(0, 200);
+  const message = String(parsed?.custom_message || "").trim().slice(0, 400);
+  const options = [
+    ...new Set(
+      (Array.isArray(parsed?.custom_options) ? parsed.custom_options : [])
+        .filter((value) => typeof value === "string")
+        .map((value) => value.trim().slice(0, 60))
+        .filter(Boolean)
+    )
+  ].slice(0, 4);
+
+  if (!slug || !question || options.length < 2) return null;
+
+  const key = `custom_${slug}`;
+  if (resolvedFacts.has(key) || resolvedFacts.has(slug)) return null;
+
+  return {
+    key,
+    message: message || "Necesito un solo dato para darte el diagnóstico correcto.",
+    question,
+    options
+  };
+}
+
+async function runDecisionGate({ message, image, imageFromContext, sharedContext, resolvedFacts }) {
   const content = [
     {
       type: "input_text",
       text: [
         `Consulta actual del cliente:\n${message || "Analiza la imagen adjunta."}`,
+        imageFromContext
+          ? "\n[La imagen adjunta es el diseño que el cliente compartió antes en esta conversación.]"
+          : "",
         `\nVariables decisivas ya resueltas: ${[...resolvedFacts].join(", ") || "ninguna"}`,
         sharedContext
       ].join("\n")
@@ -447,8 +659,10 @@ async function runDecisionGate({ message, image, sharedContext, resolvedFacts })
     model: "gpt-6-luna",
     instructions: GATE_INSTRUCTIONS,
     input: [{ role: "user", content }],
-    reasoning: { effort: "medium" },
-    max_output_tokens: 500,
+    reasoning: { effort: "low" },
+    // El razonamiento consume tokens de salida: con 500 la respuesta se cortaba
+    // y el Gate caía siempre en "none".
+    max_output_tokens: 2500,
     text: {
       format: {
         type: "json_schema",
@@ -463,6 +677,11 @@ async function runDecisionGate({ message, image, sharedContext, resolvedFacts })
                 "detailed_black_background",
                 "white_border_print",
                 "pixelated_design",
+                "dtf_application",
+                "sublimation",
+                "vinyl",
+                "file_preparation",
+                "business",
                 "other"
               ]
             },
@@ -474,8 +693,16 @@ async function runDecisionGate({ message, image, sharedContext, resolvedFacts })
                 "final_scan",
                 "white_border_pattern",
                 "design_type",
+                "custom",
                 "none"
               ]
+            },
+            custom_key: { type: "string" },
+            custom_message: { type: "string" },
+            custom_question: { type: "string" },
+            custom_options: {
+              type: "array",
+              items: { type: "string" }
             },
             confidence: {
               type: "string",
@@ -483,18 +710,31 @@ async function runDecisionGate({ message, image, sharedContext, resolvedFacts })
             },
             reason: { type: "string" }
           },
-          required: ["case_type", "missing_fact", "confidence", "reason"],
+          required: [
+            "case_type",
+            "missing_fact",
+            "custom_key",
+            "custom_message",
+            "custom_question",
+            "custom_options",
+            "confidence",
+            "reason"
+          ],
           additionalProperties: false
         }
       }
     },
     store: false,
-    prompt_cache_key: "novage-decision-gate-v4-1"
+    prompt_cache_key: "novage-decision-gate-v4-2"
   });
 
   const parsed = parseJsonOutput(data, {
     case_type: "other",
     missing_fact: "none",
+    custom_key: "",
+    custom_message: "",
+    custom_question: "",
+    custom_options: [],
     confidence: "low",
     reason: "No se pudo clasificar."
   });
@@ -506,12 +746,21 @@ async function runDecisionGate({ message, image, sharedContext, resolvedFacts })
   return { parsed, responseId: data.id || null };
 }
 
-async function runSolution({ message, image, sharedContext }) {
+async function runSolution({ message, image, imageFromContext, sharedContext, gateInfo, forcedByLimit }) {
   const content = [
     {
       type: "input_text",
       text: [
         `Consulta actual del cliente:\n${message || "Analiza la imagen adjunta."}`,
+        imageFromContext
+          ? "\n[La imagen adjunta es el diseño que el cliente compartió antes en esta conversación. Analízala.]"
+          : "",
+        gateInfo
+          ? `\nCLASIFICACIÓN PREVIA DEL CASO: ${gateInfo.caseType} | motivo: ${gateInfo.reason || "sin detalle"}`
+          : "",
+        forcedByLimit
+          ? "\nYa se hicieron varias preguntas seguidas. Resuelve con lo disponible y declara tus supuestos."
+          : "",
         sharedContext
       ].join("\n")
     }
@@ -526,7 +775,8 @@ async function runSolution({ message, image, sharedContext }) {
     instructions: SOLUTION_INSTRUCTIONS,
     input: [{ role: "user", content }],
     reasoning: { effort: "medium" },
-    max_output_tokens: 2200,
+    // Incluye margen para el razonamiento; con 2200 la respuesta podía quedar truncada.
+    max_output_tokens: 7000,
     text: {
       format: {
         type: "json_schema",
@@ -550,23 +800,37 @@ async function runSolution({ message, image, sharedContext }) {
       }
     },
     store: true,
-    prompt_cache_key: "novage-solution-v4-1",
+    prompt_cache_key: "novage-solution-v4-2",
     metadata: {
       app: "novage-ai",
-      knowledge_version: "v4.1"
+      knowledge_version: KNOWLEDGE_VERSION
     }
   });
 
+  const rawText = extractText(data);
   const parsed = parseJsonOutput(data, {
-    message: extractText(data) || "No se pudo generar una respuesta.",
+    // Nunca mostrar JSON roto al cliente.
+    message: rawText && !rawText.startsWith("{")
+      ? rawText
+      : "No pude terminar la respuesta. Envíame tu mensaje de nuevo, por favor.",
     tools: []
   });
 
+  const tools = Array.isArray(parsed.tools)
+    ? [
+        ...new Set(
+          parsed.tools
+            .filter((name) => TOOL_NAMES.includes(name))
+            .map((name) => (name === "Armador de Plantilla DTF" ? "Crear Plantilla DTF" : name))
+        )
+      ].slice(0, 4)
+    : [];
+
   return {
-    message: typeof parsed.message === "string" ? parsed.message.trim() : "No se pudo generar una respuesta.",
-    tools: Array.isArray(parsed.tools)
-      ? [...new Set(parsed.tools.filter((name) => TOOL_NAMES.includes(name)))]
-      : [],
+    message: typeof parsed.message === "string" && parsed.message.trim()
+      ? parsed.message.trim()
+      : "No se pudo generar una respuesta.",
+    tools,
     responseId: data.id || null
   };
 }
@@ -596,8 +860,11 @@ export default async function handler(req, res) {
       });
     }
 
-    const { mensaje, imagen, conversationContext } = req.body || {};
-    const message = typeof mensaje === "string" ? mensaje.trim() : "";
+    const { mensaje, imagen: imagenRaw, imagenContexto, conversationContext } = req.body || {};
+    const message = typeof mensaje === "string" ? mensaje.trim().slice(0, 6000) : "";
+    const imagen =
+      typeof imagenRaw === "string" && imagenRaw.startsWith("data:image/") ? imagenRaw : null;
+    const imageFromContext = Boolean(imagen && imagenContexto === true);
 
     if (!message && !imagen) {
       return res.status(400).json({ error: "Escribe un mensaje o sube una imagen." });
@@ -605,6 +872,8 @@ export default async function handler(req, res) {
 
     const conversation = cleanConversationContext(conversationContext);
     const resolvedFacts = collectResolvedFacts(message, conversation);
+    const confirmedFacts = buildConfirmedFacts(message, conversation);
+    const forceSolution = questionsInRow(conversation) >= MAX_QUESTIONS_IN_ROW;
 
     const retrievalQuery = buildRetrievalQuery(
       message || "Analiza el archivo adjunto para preparación DTF.",
@@ -647,35 +916,53 @@ export default async function handler(req, res) {
     const sharedContext = buildSharedContext(
       officialContext,
       solvedCasesContext,
-      conversation
+      conversation,
+      confirmedFacts
     );
 
-    const gate = await runDecisionGate({
-      message,
-      image: imagen,
-      sharedContext,
-      resolvedFacts
-    });
+    // Si el Gate falla, no tumbamos la conversación: pasamos directo a resolver.
+    let gate;
+    try {
+      gate = await runDecisionGate({
+        message,
+        image: imagen,
+        imageFromContext,
+        sharedContext,
+        resolvedFacts
+      });
+    } catch (gateError) {
+      console.error("NOVAGE gate error:", gateError);
+      gate = {
+        parsed: { case_type: "other", missing_fact: "none", confidence: "low", reason: "" },
+        responseId: null
+      };
+    }
 
-    let missingFact = gate.parsed?.missing_fact || "none";
+    let missingFact = forceSolution ? "none" : gate.parsed?.missing_fact || "none";
 
-    // Guardrail determinista: si el Gate reconoce el caso de diseño detallado
-    // con fondo negro, el color de la prenda es obligatorio antes de resolver.
+    // Guardrail determinista: diseño detallado con fondo negro exige conocer el
+    // color de la prenda, salvo que ya esté resuelto (botón o texto libre).
     if (
+      !forceSolution &&
       gate.parsed?.case_type === "detailed_black_background" &&
       !resolvedFacts.has("garment_black")
     ) {
       missingFact = "garment_black";
     }
 
-    if (missingFact !== "none" && DECISIONS[missingFact]) {
-      const decision = DECISIONS[missingFact];
+    let decision = null;
+    if (missingFact === "custom") {
+      decision = buildCustomDecision(gate.parsed, resolvedFacts);
+    } else if (missingFact !== "none" && DECISIONS[missingFact]) {
+      decision = { key: missingFact, ...DECISIONS[missingFact] };
+    }
 
+    if (decision) {
       return res.status(200).json({
         respuesta: decision.message,
         estado: "question",
         decision: {
-          key: missingFact,
+          key: decision.key,
           question: decision.question,
           options: decision.options
         },
@@ -696,7 +983,13 @@ export default async function handler(req, res) {
     const solution = await runSolution({
       message,
       image: imagen,
-      sharedContext
+      imageFromContext,
+      sharedContext,
+      gateInfo: {
+        caseType: gate.parsed?.case_type || "other",
+        reason: gate.parsed?.reason || ""
+      },
+      forcedByLimit: forceSolution
     });
 
     return res.status(200).json({
