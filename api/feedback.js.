@@ -1,5 +1,5 @@
-// NOVAGE AI • Feedback / memoria colectiva • v4.2
-const KNOWLEDGE_VERSION = "v4.2";
+// NOVAGE AI • Feedback / memoria colectiva • v4.3
+const KNOWLEDGE_VERSION = "v4.3";
 const FEEDBACK_LIMIT = 10;
 const FEEDBACK_WINDOW_MS = 60 * 60 * 1000;
 
@@ -226,7 +226,7 @@ TÉRMINOS DE BÚSQUEDA:
       // Incluye margen para razonamiento; con 1900 el resumen podía quedar vacío.
       max_output_tokens: 6000,
       store: false,
-      prompt_cache_key: "novage-case-curator-v4-2",
+      prompt_cache_key: "novage-case-curator-v4-3",
     }),
   });
 
