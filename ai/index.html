@@ -25,6 +25,7 @@
       width: 100%;
       max-width: 1080px;
       height: calc(100vh - 36px);
+      height: calc(100dvh - 36px);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -375,7 +376,7 @@
     .footer-text { text-align: center; color: #666; font-size: 10px; padding-top: 8px; }
     @media (max-width: 700px) {
       body { padding: 0; }
-      .app { height: 100vh; border: 0; border-radius: 0; }
+      .app { height: 100vh; height: 100dvh; border: 0; border-radius: 0; }
       .header { padding: 13px; }
       .logo { width: 41px; height: 41px; }
       .brand p { max-width: 180px; }
@@ -401,7 +402,7 @@
           <h1>Luna • NOVAGE AI</h1>
           <span class="pro-badge">Pro Master • Diagnóstico experto</span>
         </div>
-        <p>Asistente del Taller Digital del DTF</p>
+        <p>Asesora técnica de DTF, sublimación y personalizados</p>
       </div>
     </div>
     <button class="small-button" id="newChat">Nueva conversación</button>
@@ -412,13 +413,15 @@
       <div class="welcome-inner">
         <div class="welcome-icon">✦</div>
         <h2>¿Qué problema quieres resolver?</h2>
-        <p>Sube tu diseño o cuéntame qué sucedió. Luna analizará el diseño, hará solo las preguntas que cambien la decisión y te indicará el flujo NOVAGE más conveniente.</p>
+        <p>Sube tu diseño o cuéntame qué sucedió. Luna analiza tu caso, hace solo las preguntas que cambian el diagnóstico y te dice exactamente qué hacer para resolverlo.</p>
         <div class="method"><b>Analiza</b> → <b>Pregunta solo lo decisivo</b> → <b>Descarta</b> → <b>Diagnostica</b> → <b>Resuelve</b></div>
         <div class="suggestions">
           <button class="suggestion" data-message="Tengo bordes blancos después de imprimir en DTF. Ayúdame a encontrar la causa.">Bordes blancos al imprimir</button>
           <button class="suggestion" data-message="Tengo un diseño de internet con fondo negro y quiero prepararlo para DTF. ¿Cuál es el flujo correcto?">Diseño con fondo negro</button>
           <button class="suggestion" data-message="Mi diseño se ve pixelado. Analízame si conviene mejorarlo o vectorizarlo.">Diseño pixelado</button>
           <button class="suggestion" data-message="Quiero revisar mi archivo final antes de mandarlo a imprimir en DTF.">Revisar archivo final</button>
+          <button class="suggestion" data-message="Mi estampado se despega o se levanta después de lavarlo. ¿Qué está fallando?">Se despega al lavar</button>
+          <button class="suggestion" data-message="En sublimación mis colores salen apagados o deslavados. ¿Cómo lo corrijo?">Sublimación con colores apagados</button>
         </div>
       </div>
     </div>
@@ -442,6 +445,16 @@
 </main>
 
 <script>
+// Luna • NOVAGE AI • v4.2
+
+const STORAGE = {
+  conversation: "novage_conversation_v42",
+  feedback: "novage_feedback_done_v42",
+  decisions: "novage_decisions_done_v42",
+  lastImage: "novage_last_image_v42"
+};
+// Límite seguro de imagen en base64 (Vercel acepta ~4.5 MB por petición).
+const MAX_DATAURL_CHARS = 3_400_000;
 
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
@@ -455,9 +468,12 @@ const newChat = document.getElementById("newChat");
 
 let selectedImage = null;
 let enviando = false;
-let conversation = loadJSON("novage_conversation_v41", []);
-let feedbackDone = new Set(loadJSON("novage_feedback_done_v41", []));
-let decisionsDone = new Set(loadJSON("novage_decisions_done_v41", []));
+let conversation = loadJSON(STORAGE.conversation, []);
+let feedbackDone = new Set(loadJSON(STORAGE.feedback, []));
+let decisionsDone = new Set(loadJSON(STORAGE.decisions, []));
+// Último diseño enviado: se reenvía cuando el cliente responde una pregunta,
+// para que Luna siga viendo el archivo al dar la solución.
+let ultimaImagen = loadText(STORAGE.lastImage);
 
 const NOVAGE_TOOLS = {
   "Guía del Taller Digital": {
@@ -569,25 +585,57 @@ function loadJSON(key, fallback) {
   }
 }
 
+function loadText(key) {
+  try {
+    return sessionStorage.getItem(key) || null;
+  } catch {
+    return null;
+  }
+}
+
+function safeSet(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch (error) {
+    console.warn("No se pudo guardar en sesión:", key, error);
+  }
+}
+
 function saveConversation() {
-  sessionStorage.setItem(
-    "novage_conversation_v41",
-    JSON.stringify(conversation.slice(-40))
-  );
+  safeSet(STORAGE.conversation, JSON.stringify(conversation.slice(-40)));
 }
 
 function saveFeedbackDone() {
-  sessionStorage.setItem(
-    "novage_feedback_done_v41",
-    JSON.stringify([...feedbackDone])
-  );
+  safeSet(STORAGE.feedback, JSON.stringify([...feedbackDone]));
 }
 
 function saveDecisionsDone() {
-  sessionStorage.setItem(
-    "novage_decisions_done_v41",
-    JSON.stringify([...decisionsDone])
-  );
+  safeSet(STORAGE.decisions, JSON.stringify([...decisionsDone]));
+}
+
+function guardarUltimaImagen(dataUrl) {
+  ultimaImagen = dataUrl;
+  safeSet(STORAGE.lastImage, dataUrl);
+}
+
+function ultimoEstadoLuna() {
+  for (let i = conversation.length - 1; i >= 0; i -= 1) {
+    if (conversation[i].role === "assistant") return conversation[i];
+  }
+  return null;
+}
+
+// Si el cliente escribe en vez de usar los botones, la tarjeta queda cerrada.
+function cerrarDecisionPendiente() {
+  const last = ultimoEstadoLuna();
+  if (!last || last.state !== "question" || !last.responseId) return;
+  if (decisionsDone.has(last.responseId)) return;
+
+  decisionsDone.add(last.responseId);
+  saveDecisionsDone();
+  document
+    .querySelectorAll(`.decision-card[data-response-id="${CSS.escape(last.responseId)}"] .decision-btn`)
+    .forEach((btn) => { btn.disabled = true; });
 }
 
 function esconderWelcome() {
@@ -659,6 +707,7 @@ function crearTarjetaHerramienta(nombre) {
 function crearDecision(decision, responseId) {
   const card = document.createElement("div");
   card.className = "decision-card";
+  if (responseId) card.dataset.responseId = responseId;
 
   const label = document.createElement("div");
   label.className = "decision-label";
@@ -819,7 +868,7 @@ function crearFeedback(responseId) {
     setTimeout(() => {
       enviarMensaje(
         "La solución anterior no resolvió mi problema. No repitas el mismo diagnóstico. Revisa lo que ya te respondí y continúa con el siguiente dato decisivo que realmente cambie la causa o la ruta.",
-        { displayText: "No lo solucionó" }
+        { displayText: "No lo solucionó", reuseImage: true }
       );
     }, 400);
   }
@@ -905,7 +954,12 @@ function renderMensaje(tipo, texto, imagen = null, responseId = null, meta = {})
     const cards = document.createElement("div");
     cards.className = "tool-cards";
 
+    // Evita tarjetas duplicadas (ej. Crear Plantilla / Armador apuntan a la misma página).
+    const urlsMostradas = new Set();
     meta.tools.forEach((nombre) => {
+      const url = NOVAGE_TOOLS[nombre]?.url;
+      if (!url || urlsMostradas.has(url)) return;
+      urlsMostradas.add(url);
       const card = crearTarjetaHerramienta(nombre);
       if (card) cards.appendChild(card);
     });
@@ -974,8 +1028,21 @@ async function prepararImagen(file) {
     return originalDataUrl;
   }
 
-  const MAX = 1700;
-  const ratio = Math.min(1, MAX / img.width, MAX / img.height);
+  // Reduce hasta que el archivo quepa en el límite de envío,
+  // conservando transparencia en PNG/WEBP (importante para diagnosticar DTF).
+  let max = 1700;
+  let dataUrl = renderizarImagen(img, max, file.type);
+
+  for (let intento = 0; intento < 4 && dataUrl.length > MAX_DATAURL_CHARS; intento += 1) {
+    max = Math.round(max * 0.8);
+    dataUrl = renderizarImagen(img, max, file.type);
+  }
+
+  return dataUrl;
+}
+
+function renderizarImagen(img, max, type) {
+  const ratio = Math.min(1, max / img.width, max / img.height);
   const width = Math.max(1, Math.round(img.width * ratio));
   const height = Math.max(1, Math.round(img.height * ratio));
 
@@ -987,14 +1054,8 @@ async function prepararImagen(file) {
   ctx.clearRect(0, 0, width, height);
   ctx.drawImage(img, 0, 0, width, height);
 
-  if (file.type === "image/png") {
-    return canvas.toDataURL("image/png");
-  }
-
-  if (file.type === "image/webp") {
-    return canvas.toDataURL("image/webp", 0.9);
-  }
-
+  if (type === "image/png") return canvas.toDataURL("image/png");
+  if (type === "image/webp") return canvas.toDataURL("image/webp", 0.9);
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
@@ -1039,6 +1100,13 @@ async function enviarMensaje(mensajeManual = null, config = {}) {
   if (!mensaje && !selectedImage) return false;
 
   const imagenActual = selectedImage;
+  // Reenviar el último diseño cuando el cliente responde a una pregunta de Luna
+  // o indica que la solución no funcionó; así la solución sigue viendo el archivo.
+  const reutilizarImagen =
+    !imagenActual &&
+    Boolean(ultimaImagen) &&
+    (config.reuseImage === true || ultimoEstadoLuna()?.state === "question");
+  const imagenParaEnviar = imagenActual || (reutilizarImagen ? ultimaImagen : null);
   const textoUsuario =
     mensaje ||
     "Analiza esta imagen como especialista NOVAGE. Si falta un dato que cambie realmente la preparación, pregúntamelo con opciones; si no falta, dame el flujo correcto.";
@@ -1058,6 +1126,8 @@ async function enviarMensaje(mensajeManual = null, config = {}) {
   });
   saveConversation();
 
+  if (imagenActual) guardarUltimaImagen(imagenActual);
+
   input.value = "";
   ajustarTextarea();
   limpiarImagen();
@@ -1069,7 +1139,8 @@ async function enviarMensaje(mensajeManual = null, config = {}) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         mensaje: textoUsuario,
-        imagen: imagenActual,
+        imagen: imagenParaEnviar,
+        imagenContexto: Boolean(reutilizarImagen),
         conversationContext: contextBeforeCurrentTurn
       })
     });
@@ -1080,6 +1151,8 @@ async function enviarMensaje(mensajeManual = null, config = {}) {
     if (!response.ok) {
       throw new Error(data.details || data.error || "No se pudo generar una respuesta.");
     }
+
+    if (!config.answeredDecisionResponseId) cerrarDecisionPendiente();
 
     const answer = data.respuesta || "No pude generar una respuesta.";
     const decision =
@@ -1172,12 +1245,13 @@ document.querySelectorAll(".suggestion").forEach((button) => {
 
 newChat.addEventListener("click", () => {
   selectedImage = null;
+  ultimaImagen = null;
   conversation = [];
   feedbackDone = new Set();
   decisionsDone = new Set();
-  sessionStorage.removeItem("novage_conversation_v41");
-  sessionStorage.removeItem("novage_feedback_done_v41");
-  sessionStorage.removeItem("novage_decisions_done_v41");
+  try {
+    Object.values(STORAGE).forEach((key) => sessionStorage.removeItem(key));
+  } catch {}
   window.location.reload();
 });
 
