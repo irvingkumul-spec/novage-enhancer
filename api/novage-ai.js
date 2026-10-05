@@ -1,5 +1,7 @@
-// NOVAGE AI • Shopify / Vercel backend • v5.0
-// Sin guardado de chats, sin feedback, sin memoria colectiva.
+import crypto from "crypto";
+
+// NOVAGE AI • Shopify / Vercel backend protegido • v5.1
+// Sin guardado de chats. Requiere sesión firmada + origen oficial.
 // Mantiene solo el contexto de la conversación ACTUAL que envía el frontend.
 
 const RATE_LIMIT = 30;
@@ -94,31 +96,124 @@ function checkRateLimit(ip) {
   return { allowed: true, remaining: RATE_LIMIT - current.count };
 }
 
-function isAllowedOrigin(origin) {
-  if (!origin) return true;
+const ALLOWED_ORIGINS = new Set([
+  "https://novage.store",
+  "https://www.novage.store"
+]);
 
-  if (
-    origin === "https://novage.store" ||
-    origin === "https://www.novage.store" ||
-    origin === "https://tools.novage.store"
-  ) {
-    return true;
+const API_HOST = "tools.novage.store";
+
+function getOrigin(req) {
+  return String(req.headers.origin || "").trim();
+}
+
+function getHost(req) {
+  return String(req.headers["x-forwarded-host"] || req.headers.host || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+}
+
+function isAllowedOrigin(origin) {
+  return ALLOWED_ORIGINS.has(String(origin || "").trim());
+}
+
+function getUserAgent(req) {
+  return String(req.headers["user-agent"] || "").slice(0, 600);
+}
+
+function fingerprint(req) {
+  const ip = getClientIp(req);
+  const ua = getUserAgent(req);
+
+  return crypto
+    .createHash("sha256")
+    .update(`${ip}|${ua}`)
+    .digest("base64url");
+}
+
+function safeEqual(a, b) {
+  const aBuf = Buffer.from(String(a || ""));
+  const bBuf = Buffer.from(String(b || ""));
+
+  if (aBuf.length !== bBuf.length) return false;
+
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
+function verifySessionToken(req) {
+  const secret = process.env.NOVAGE_SESSION_SECRET;
+
+  if (!secret) {
+    throw new Error("NOVAGE_SESSION_SECRET no está configurada.");
   }
 
-  return /^https:\/\/[a-z0-9-]+\.myshopify\.com$/i.test(origin);
+  const authorization = String(req.headers.authorization || "");
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+
+  if (!match) {
+    throw new Error("Falta la sesión protegida.");
+  }
+
+  const token = match[1].trim();
+  const parts = token.split(".");
+
+  if (parts.length !== 2) {
+    throw new Error("Sesión inválida.");
+  }
+
+  const [body, signature] = parts;
+
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(body)
+    .digest("base64url");
+
+  if (!safeEqual(signature, expected)) {
+    throw new Error("Firma de sesión inválida.");
+  }
+
+  let payload;
+
+  try {
+    payload = JSON.parse(
+      Buffer.from(body, "base64url").toString("utf8")
+    );
+  } catch {
+    throw new Error("Sesión dañada.");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+
+  if (payload?.aud !== "novage-ai") {
+    throw new Error("Sesión no válida para NOVAGE AI.");
+  }
+
+  if (!Number.isFinite(payload?.exp) || payload.exp <= now) {
+    throw new Error("La sesión expiró.");
+  }
+
+  if (!payload?.fp || payload.fp !== fingerprint(req)) {
+    throw new Error("La sesión no corresponde a este dispositivo.");
+  }
+
+  return payload;
 }
 
 function setCors(req, res) {
-  const origin = String(req.headers.origin || "");
+  const origin = getOrigin(req);
 
-  if (origin && isAllowedOrigin(origin)) {
+  if (isAllowedOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
 
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Max-Age", "86400");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+  res.setHeader("Access-Control-Max-Age", "600");
 }
 
 function extractText(data) {
@@ -714,10 +809,26 @@ async function runSolution({
 export default async function handler(req, res) {
   setCors(req, res);
 
-  const origin = String(req.headers.origin || "");
+  const origin = getOrigin(req);
+  const host = getHost(req);
+  const secFetchSite = String(req.headers["sec-fetch-site"] || "").toLowerCase();
 
-  if (origin && !isAllowedOrigin(origin)) {
-    return res.status(403).json({ error: "Origen no permitido." });
+  if (!isAllowedOrigin(origin)) {
+    return res.status(403).json({ error: "Origen no autorizado." });
+  }
+
+  if (host !== API_HOST) {
+    return res.status(403).json({ error: "Host no autorizado." });
+  }
+
+  if (
+    secFetchSite &&
+    secFetchSite !== "same-site" &&
+    secFetchSite !== "same-origin"
+  ) {
+    return res.status(403).json({
+      error: "Contexto de navegación no autorizado."
+    });
   }
 
   if (req.method === "OPTIONS") {
@@ -729,6 +840,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    verifySessionToken(req);
+
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({
         error: "OPENAI_API_KEY no está configurada."
