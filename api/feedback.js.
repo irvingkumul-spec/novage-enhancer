@@ -66,6 +66,22 @@ function sanitizeConversation(conversation) {
         text,
         hasImage: Boolean(item?.hasImage),
         responseId: typeof item?.responseId === "string" ? item.responseId : null,
+        state: item?.state === "question" ? "question" : item?.state === "solution" ? "solution" : null,
+        decision:
+          item?.decision &&
+          typeof item.decision.question === "string" &&
+          Array.isArray(item.decision.options)
+            ? {
+                question: redactPII(item.decision.question).slice(0, 800),
+                options: item.decision.options
+                  .filter((value) => typeof value === "string")
+                  .map((value) => redactPII(value).slice(0, 300))
+                  .slice(0, 4),
+              }
+            : null,
+        tools: Array.isArray(item?.tools)
+          ? item.tools.filter((value) => typeof value === "string").slice(0, 12)
+          : [],
         sources: Array.isArray(item?.sources) ? item.sources.slice(0, 12) : [],
       };
     })
@@ -80,7 +96,15 @@ function conversationToText(conversation) {
         ? "\n[El cliente adjuntó una imagen en este turno.]"
         : "";
 
-      return `${index + 1}. ${label}:\n${item.text}${imageNote}`;
+      const stateNote = item.state ? `\n[Estado de Luna: ${item.state}]` : "";
+      const decisionNote = item.decision?.question
+        ? `\n[Pregunta decisiva: ${item.decision.question} | Opciones: ${item.decision.options.join(" | ")}]`
+        : "";
+      const toolsNote = item.tools?.length
+        ? `\n[Herramientas sugeridas: ${item.tools.join(", ")}]`
+        : "";
+
+      return `${index + 1}. ${label}:\n${item.text}${imageNote}${stateNote}${decisionNote}${toolsNote}`;
     })
     .join("\n\n");
 }
@@ -132,6 +156,9 @@ REGLAS:
 - Si hubo imagen, puedes decir que hubo una imagen, pero no inventes detalles que no quedaron expresados en la conversación.
 - La experiencia de cliente NO es documentación oficial; es un patrón confirmado por un usuario.
 - El objetivo es ayudar a Luna a reconocer casos futuros y saber QUÉ SEÑALES debe comprobar antes de reutilizar el diagnóstico.
+- Conserva las preguntas decisivas que realmente ayudaron a separar rutas diagnósticas.
+- Si el cliente eligió una opción guiada, registra qué pregunta se hizo, qué opción eligió y por qué esa elección cambió el flujo.
+- No conviertas opciones de interfaz en hechos técnicos si el cliente no las confirmó.
 - Escribe en español.
 
 Devuelve SOLO texto plano con exactamente esta estructura:
@@ -150,6 +177,9 @@ CONTEXTO RELEVANTE:
 ...
 
 PREGUNTAS DECISIVAS QUE SE HICIERON:
+- ...
+
+OPCIONES OFRECIDAS Y ELECCIONES DEL CLIENTE:
 - ...
 
 RESPUESTAS CLAVE DEL CLIENTE:
@@ -186,7 +216,7 @@ TÉRMINOS DE BÚSQUEDA:
       reasoning: { effort: "medium" },
       max_output_tokens: 1900,
       store: false,
-      prompt_cache_key: "novage-case-curator-v3",
+      prompt_cache_key: "novage-case-curator-v4",
     }),
   });
 
@@ -266,7 +296,7 @@ async function uploadCaseFile(caseText, responseId, customerNote) {
           created_date: now.toISOString().slice(0, 10),
           has_customer_note: Boolean(String(customerNote || "").trim()),
           response_id: String(responseId || "unknown").slice(0, 512),
-          knowledge_version: "v3",
+          knowledge_version: "v4",
         },
       }),
     }
@@ -333,7 +363,11 @@ export default async function handler(req, res) {
 
     const lastAssistant = lastAssistantMessage(cleanConversation);
 
-    if (!lastAssistant?.text?.match(/\[ESTADO:\s*SOLUCION\]/i)) {
+    const hasConfirmableSolution =
+      lastAssistant?.state === "solution" ||
+      Boolean(lastAssistant?.text?.match(/\[ESTADO:\s*SOLUCION\]/i));
+
+    if (!hasConfirmableSolution) {
       return res.status(400).json({
         error: "La conversación todavía no contiene una solución final confirmable.",
       });
