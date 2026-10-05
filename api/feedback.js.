@@ -1,4 +1,4 @@
-const FEEDBACK_LIMIT = 8;
+const FEEDBACK_LIMIT = 10;
 const FEEDBACK_WINDOW_MS = 60 * 60 * 1000;
 
 const feedbackUsage = globalThis.__NOVAGE_FEEDBACK_USAGE__ || new Map();
@@ -20,34 +20,54 @@ function allowFeedback(ip) {
   }
 
   if (current.count >= FEEDBACK_LIMIT) return false;
+
   current.count += 1;
   return true;
 }
 
 function extractText(data) {
   const texts = [];
+
   for (const item of data.output || []) {
     for (const content of item.content || []) {
-      if (content.type === "output_text" && content.text) texts.push(content.text);
+      if (content.type === "output_text" && content.text) {
+        texts.push(content.text);
+      }
     }
   }
+
   return texts.join("\n").trim();
+}
+
+function redactPII(text) {
+  if (!text) return "";
+
+  return String(text)
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[EMAIL_ELIMINADO]")
+    .replace(/(?:\+?\d[\d\s().-]{7,}\d)/g, "[TELEFONO_ELIMINADO]")
+    .replace(/\b(?:order|orden|pedido)\s*#?\s*[A-Z0-9-]{4,}\b/gi, "[PEDIDO_ELIMINADO]")
+    .replace(/#[0-9]{5,}/g, "[ID_ELIMINADO]")
+    .trim();
 }
 
 function sanitizeConversation(conversation) {
   if (!Array.isArray(conversation)) return [];
 
   return conversation
-    .slice(-24)
+    .slice(-28)
     .map((item) => {
       const role = item?.role === "assistant" ? "assistant" : "user";
       let text = typeof item?.text === "string" ? item.text.trim() : "";
-      text = text
-        .replace(/\[HERRAMIENTA:\s*[^\]]+\]/gi, "")
-        .replace(/\[ESTADO:\s*(?:PREGUNTA|SOLUCION)\]/gi, "")
-        .trim()
-        .slice(0, 6000);
-      return { role, text, hasImage: Boolean(item?.hasImage) };
+
+      text = redactPII(text).slice(0, 7000);
+
+      return {
+        role,
+        text,
+        hasImage: Boolean(item?.hasImage),
+        responseId: typeof item?.responseId === "string" ? item.responseId : null,
+        sources: Array.isArray(item?.sources) ? item.sources.slice(0, 12) : [],
+      };
     })
     .filter((item) => item.text);
 }
@@ -56,14 +76,38 @@ function conversationToText(conversation) {
   return conversation
     .map((item, index) => {
       const label = item.role === "assistant" ? "LUNA" : "CLIENTE";
-      const imageNote = item.hasImage ? "\n[El cliente adjuntó una imagen en este turno.]" : "";
+      const imageNote = item.hasImage
+        ? "\n[El cliente adjuntó una imagen en este turno.]"
+        : "";
+
       return `${index + 1}. ${label}:\n${item.text}${imageNote}`;
     })
     .join("\n\n");
 }
 
-async function createSolvedCase(conversation) {
+function lastAssistantMessage(conversation) {
+  for (let i = conversation.length - 1; i >= 0; i -= 1) {
+    if (conversation[i]?.role === "assistant") return conversation[i];
+  }
+  return null;
+}
+
+function parseCategory(caseText) {
+  const match = caseText.match(/^CATEGORIA:\s*(.+)$/im);
+  const raw = match?.[1]?.trim() || "soporte_dtf";
+
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60) || "soporte_dtf";
+}
+
+async function createSolvedCase(conversation, customerNote) {
   const transcript = conversationToText(conversation);
+  const note = redactPII(customerNote || "").slice(0, 1500);
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -74,23 +118,27 @@ async function createSolvedCase(conversation) {
     body: JSON.stringify({
       model: "gpt-6-luna",
       instructions: `
-Convierte una conversación de soporte de NOVAGE en un caso reutilizable y anónimo para una base de conocimiento de casos resueltos.
+Eres el curador de memoria colectiva de NOVAGE.
 
-REGLAS OBLIGATORIAS:
-- El cliente acaba de confirmar que la solución de Luna resolvió su problema.
-- Resume SOLO información apoyada por la conversación.
-- No inventes causas descartadas, herramientas utilizadas ni resultados que no aparezcan.
-- Elimina nombres, correos, teléfonos, direcciones, números de pedido, identificadores de cliente y cualquier otro dato personal.
-- No copies datos personales aunque aparezcan en el texto.
-- Si hubo una imagen, puedes mencionar que se adjuntó una imagen, pero no inventes detalles que no quedaron expresados en la conversación.
-- Distingue claramente entre hechos confirmados y diagnóstico probable.
-- Este archivo NO es documentación oficial; es experiencia de cliente confirmada.
+Convierte una conversación de soporte RESUELTA en un caso reutilizable, anónimo y técnicamente prudente.
+
+REGLAS:
+- El cliente confirmó que la solución le ayudó.
+- Resume solo hechos apoyados por la conversación.
+- No inventes causas descartadas, procesos ni resultados.
+- Separa hechos de hipótesis.
+- No conviertas una coincidencia en regla universal.
+- Elimina/omite nombres, correos, teléfonos, direcciones, pedidos, IDs y datos personales.
+- Si hubo imagen, puedes decir que hubo una imagen, pero no inventes detalles que no quedaron expresados en la conversación.
+- La experiencia de cliente NO es documentación oficial; es un patrón confirmado por un usuario.
+- El objetivo es ayudar a Luna a reconocer casos futuros y saber QUÉ SEÑALES debe comprobar antes de reutilizar el diagnóstico.
 - Escribe en español.
 
-Devuelve SOLO texto plano con esta estructura:
+Devuelve SOLO texto plano con exactamente esta estructura:
 
 CASO NOVAGE RESUELTO
 ESTADO: CLIENTE_CONFIRMÓ_SOLUCIÓN
+CATEGORIA: una_categoria_corta
 
 PROBLEMA:
 ...
@@ -101,7 +149,7 @@ SÍNTOMAS:
 CONTEXTO RELEVANTE:
 ...
 
-PREGUNTAS DE DIAGNÓSTICO:
+PREGUNTAS DECISIVAS QUE SE HICIERON:
 - ...
 
 RESPUESTAS CLAVE DEL CLIENTE:
@@ -113,46 +161,76 @@ CAUSAS DESCARTADAS:
 DIAGNÓSTICO MÁS PROBABLE:
 ...
 
-SOLUCIÓN QUE FUNCIONÓ:
+SOLUCIÓN QUE AYUDÓ:
+...
+
+COMENTARIO DEL CLIENTE SOBRE QUÉ LE AYUDÓ:
 ...
 
 HERRAMIENTAS NOVAGE RELACIONADAS:
 - ...
 
-PATRÓN REUTILIZABLE PARA FUTUROS CASOS:
+PATRÓN REUTILIZABLE:
 ...
 
 SEÑALES QUE DEBEN COINCIDIR ANTES DE REUTILIZAR ESTE DIAGNÓSTICO:
 - ...
 
+SEÑALES QUE OBLIGAN A CONSIDERAR OTRA CAUSA:
+- ...
+
 TÉRMINOS DE BÚSQUEDA:
 ...
 `,
-      input: transcript,
-      reasoning: { effort: "low" },
-      max_output_tokens: 1600,
+      input: `${transcript}\n\nCOMENTARIO OPCIONAL DEL CLIENTE:\n${note || "Sin comentario adicional."}`,
+      reasoning: { effort: "medium" },
+      max_output_tokens: 1900,
+      store: false,
+      prompt_cache_key: "novage-case-curator-v3",
     }),
   });
 
   const data = await response.json();
+
   if (!response.ok) {
     throw new Error(data?.error?.message || "No se pudo resumir el caso.");
   }
 
-  const text = extractText(data);
+  const text = redactPII(extractText(data));
   if (!text) throw new Error("El resumen del caso quedó vacío.");
+
   return text;
 }
 
-async function uploadCaseFile(caseText, responseId) {
+async function deleteOpenAIFile(fileId) {
+  if (!fileId) return;
+
+  try {
+    await fetch(`https://api.openai.com/v1/files/${encodeURIComponent(fileId)}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+    });
+  } catch (error) {
+    console.error("No se pudo limpiar archivo huérfano:", error);
+  }
+}
+
+async function uploadCaseFile(caseText, responseId, customerNote) {
   const now = new Date();
   const date = now.toISOString().slice(0, 10).replaceAll("-", "");
   const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const filename = `novage-solved-case-${date}-${unique}.txt`;
+  const category = parseCategory(caseText);
 
   const form = new FormData();
   form.append("purpose", "user_data");
-  form.append("file", new Blob([caseText], { type: "text/plain;charset=utf-8" }), filename);
+  form.append(
+    "file",
+    new Blob([caseText], { type: "text/plain;charset=utf-8" }),
+    filename
+  );
 
   const uploadResponse = await fetch("https://api.openai.com/v1/files", {
     method: "POST",
@@ -163,6 +241,7 @@ async function uploadCaseFile(caseText, responseId) {
   });
 
   const uploadData = await uploadResponse.json();
+
   if (!uploadResponse.ok) {
     throw new Error(uploadData?.error?.message || "No se pudo subir el caso.");
   }
@@ -183,21 +262,29 @@ async function uploadCaseFile(caseText, responseId) {
           source: "customer_feedback",
           status: "customer_confirmed",
           resolved: true,
+          category,
           created_date: now.toISOString().slice(0, 10),
+          has_customer_note: Boolean(String(customerNote || "").trim()),
           response_id: String(responseId || "unknown").slice(0, 512),
+          knowledge_version: "v3",
         },
       }),
     }
   );
 
   const attachData = await attachResponse.json();
+
   if (!attachResponse.ok) {
-    throw new Error(attachData?.error?.message || "No se pudo adjuntar el caso al Vector Store.");
+    await deleteOpenAIFile(uploadData.id);
+    throw new Error(
+      attachData?.error?.message || "No se pudo adjuntar el caso al Vector Store."
+    );
   }
 
   return {
     fileId: uploadData.id,
     filename,
+    category,
     vectorStoreFileId: attachData.id,
     status: attachData.status || "in_progress",
   };
@@ -212,18 +299,26 @@ export default async function handler(req, res) {
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: "OPENAI_API_KEY no está configurada." });
     }
+
     if (!process.env.NOVAGE_CASES_VECTOR_STORE_ID) {
-      return res.status(500).json({ error: "NOVAGE_CASES_VECTOR_STORE_ID no está configurado." });
+      return res.status(500).json({
+        error: "NOVAGE_CASES_VECTOR_STORE_ID no está configurado.",
+      });
     }
 
-    const { helpful, conversation, responseId } = req.body || {};
+    const { helpful, conversation, responseId, customerNote } = req.body || {};
 
     if (helpful !== true) {
-      return res.status(200).json({ saved: false, message: "La respuesta no se guardó como caso resuelto." });
+      return res.status(200).json({
+        saved: false,
+        message: "La respuesta no se guardó como caso resuelto.",
+      });
     }
 
     if (!allowFeedback(getClientIp(req))) {
-      return res.status(429).json({ error: "Demasiados casos enviados en poco tiempo. Intenta más tarde." });
+      return res.status(429).json({
+        error: "Demasiados casos enviados en poco tiempo. Intenta más tarde.",
+      });
     }
 
     const cleanConversation = sanitizeConversation(conversation);
@@ -231,11 +326,21 @@ export default async function handler(req, res) {
     const hasAssistant = cleanConversation.some((item) => item.role === "assistant");
 
     if (cleanConversation.length < 2 || !hasUser || !hasAssistant) {
-      return res.status(400).json({ error: "No hay suficiente conversación para crear un caso." });
+      return res.status(400).json({
+        error: "No hay suficiente conversación para crear un caso.",
+      });
     }
 
-    const caseText = await createSolvedCase(cleanConversation);
-    const saved = await uploadCaseFile(caseText, responseId);
+    const lastAssistant = lastAssistantMessage(cleanConversation);
+
+    if (!lastAssistant?.text?.match(/\[ESTADO:\s*SOLUCION\]/i)) {
+      return res.status(400).json({
+        error: "La conversación todavía no contiene una solución final confirmable.",
+      });
+    }
+
+    const caseText = await createSolvedCase(cleanConversation, customerNote);
+    const saved = await uploadCaseFile(caseText, responseId, customerNote);
 
     return res.status(200).json({
       saved: true,
@@ -244,6 +349,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     console.error("NOVAGE feedback error:", error);
+
     return res.status(500).json({
       error: "No se pudo guardar el caso resuelto.",
       details: error?.message || "Error desconocido",
