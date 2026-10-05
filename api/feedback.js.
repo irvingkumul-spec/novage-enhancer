@@ -1,3 +1,5 @@
+// NOVAGE AI • Feedback / memoria colectiva • v4.2
+const KNOWLEDGE_VERSION = "v4.2";
 const FEEDBACK_LIMIT = 10;
 const FEEDBACK_WINDOW_MS = 60 * 60 * 1000;
 
@@ -44,9 +46,13 @@ function redactPII(text) {
 
   return String(text)
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[EMAIL_ELIMINADO]")
-    .replace(/(?:\+?\d[\d\s().-]{7,}\d)/g, "[TELEFONO_ELIMINADO]")
+    // Teléfono: solo si tiene 10+ dígitos (no borra fechas, medidas ni temperaturas).
+    .replace(/(?:\+?\d[\d\s().-]{8,}\d)/g, (match) =>
+      match.replace(/\D/g, "").length >= 10 ? "[TELEFONO_ELIMINADO]" : match
+    )
     .replace(/\b(?:order|orden|pedido)\s*#?\s*[A-Z0-9-]{4,}\b/gi, "[PEDIDO_ELIMINADO]")
-    .replace(/#[0-9]{5,}/g, "[ID_ELIMINADO]")
+    // IDs con # pero sin tocar colores hex de 6 dígitos (#000000).
+    .replace(/#(?![0-9a-f]{6}\b)[0-9]{5,}\b/gi, "[ID_ELIMINADO]")
     .trim();
 }
 
@@ -159,6 +165,8 @@ REGLAS:
 - El objetivo es ayudar a Luna a reconocer casos futuros y saber QUÉ SEÑALES debe comprobar antes de reutilizar el diagnóstico.
 - Conserva las preguntas decisivas que realmente ayudaron a separar rutas diagnósticas.
 - Si el cliente eligió una opción guiada, registra qué pregunta se hizo, qué opción eligió y por qué esa elección cambió el flujo.
+- Los mensajes que empiezan con "RESPUESTA A PREGUNTA DECISIVA" son clics del cliente en botones: registra solo la pregunta y la opción elegida.
+- Indica la técnica del caso (DTF, sublimación, vinil u otra) en CONTEXTO RELEVANTE y en la CATEGORIA.
 - No conviertas opciones de interfaz en hechos técnicos si el cliente no las confirmó.
 - Escribe en español.
 
@@ -215,9 +223,10 @@ TÉRMINOS DE BÚSQUEDA:
 `,
       input: `${transcript}\n\nCOMENTARIO OPCIONAL DEL CLIENTE:\n${note || "Sin comentario adicional."}`,
       reasoning: { effort: "medium" },
-      max_output_tokens: 1900,
+      // Incluye margen para razonamiento; con 1900 el resumen podía quedar vacío.
+      max_output_tokens: 6000,
       store: false,
-      prompt_cache_key: "novage-case-curator-v4-1",
+      prompt_cache_key: "novage-case-curator-v4-2",
     }),
   });
 
@@ -297,7 +306,7 @@ async function uploadCaseFile(caseText, responseId, customerNote) {
           created_date: now.toISOString().slice(0, 10),
           has_customer_note: Boolean(String(customerNote || "").trim()),
           response_id: String(responseId || "unknown").slice(0, 512),
-          knowledge_version: "v4.1",
+          knowledge_version: KNOWLEDGE_VERSION,
         },
       }),
     }
