@@ -204,6 +204,71 @@
     .tool-button.primary { background: #e3fc02; color: #090909; }
     .tool-button.secondary { background: #272727; color: #fff; border: 1px solid #3b3b3b; }
     .tool-button:hover { transform: translateY(-1px); }
+    .decision-card {
+      margin-top: 15px;
+      padding: 14px;
+      border: 1px solid #3d4300;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #191b0a 0%, #141414 100%);
+    }
+    .decision-label {
+      margin-bottom: 5px;
+      color: #dff600;
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .65px;
+      text-transform: uppercase;
+    }
+    .decision-question {
+      color: #fff;
+      font-size: 14px;
+      line-height: 1.5;
+      font-weight: 750;
+    }
+    .decision-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 11px;
+    }
+    .decision-btn {
+      min-width: 74px;
+      border: 1px solid #414141;
+      border-radius: 10px;
+      padding: 9px 13px;
+      background: #242424;
+      color: #f3f3f3;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 750;
+      transition: .16s ease;
+    }
+    .decision-btn:hover {
+      border-color: #e3fc02;
+      color: #fff;
+      transform: translateY(-1px);
+    }
+    .decision-btn.primary {
+      background: #e3fc02;
+      border-color: #e3fc02;
+      color: #090909;
+    }
+    .decision-btn:disabled {
+      opacity: .45;
+      cursor: default;
+      transform: none;
+    }
+    .decision-btn.selected {
+      opacity: 1;
+      border-color: #e3fc02;
+      box-shadow: 0 0 0 1px rgba(227,252,2,.18) inset;
+    }
+    .decision-status {
+      margin-top: 9px;
+      color: #8e8e8e;
+      font-size: 11px;
+      line-height: 1.45;
+    }
     .feedback {
       margin-top: 9px;
       padding: 11px 12px;
@@ -334,7 +399,7 @@
       <div class="brand-copy">
         <div class="brand-line">
           <h1>Luna • NOVAGE AI</h1>
-          <span class="pro-badge">Diagnóstico experto</span>
+          <span class="pro-badge">Pro Master • Diagnóstico experto</span>
         </div>
         <p>Asistente del Taller Digital del DTF</p>
       </div>
@@ -347,8 +412,8 @@
       <div class="welcome-inner">
         <div class="welcome-icon">✦</div>
         <h2>¿Qué problema quieres resolver?</h2>
-        <p>Sube tu diseño o cuéntame qué sucedió. Luna analizará el caso, descartará causas y te indicará el flujo NOVAGE más conveniente.</p>
-        <div class="method"><b>Analiza</b> → <b>Pregunta</b> → <b>Descarta</b> → <b>Diagnostica</b> → <b>Resuelve</b></div>
+        <p>Sube tu diseño o cuéntame qué sucedió. Luna analizará el diseño, hará solo las preguntas que cambien la decisión y te indicará el flujo NOVAGE más conveniente.</p>
+        <div class="method"><b>Analiza</b> → <b>Pregunta solo lo decisivo</b> → <b>Descarta</b> → <b>Diagnostica</b> → <b>Resuelve</b></div>
         <div class="suggestions">
           <button class="suggestion" data-message="Tengo bordes blancos después de imprimir en DTF. Ayúdame a encontrar la causa.">Bordes blancos al imprimir</button>
           <button class="suggestion" data-message="Tengo un diseño de internet con fondo negro y quiero prepararlo para DTF. ¿Cuál es el flujo correcto?">Diseño con fondo negro</button>
@@ -372,7 +437,7 @@
       <button class="send" id="send" aria-label="Enviar">↑</button>
     </div>
 
-    <div class="footer-text">Luna analiza con conocimiento NOVAGE y casos reales confirmados. Verifica información crítica de producción.</div>
+    <div class="footer-text">Luna decide la técnica, pregunta solo lo necesario y aprende de casos resueltos. Verifica información crítica de producción.</div>
   </div>
 </main>
 
@@ -392,6 +457,7 @@ let selectedImage = null;
 let enviando = false;
 let conversation = loadJSON("novage_conversation", []);
 let feedbackDone = new Set(loadJSON("novage_feedback_done", []));
+let decisionsDone = new Set(loadJSON("novage_decisions_done", []));
 
 const NOVAGE_TOOLS = {
   "Guía del Taller Digital": {
@@ -511,6 +577,10 @@ function saveFeedbackDone() {
   sessionStorage.setItem("novage_feedback_done", JSON.stringify([...feedbackDone]));
 }
 
+function saveDecisionsDone() {
+  sessionStorage.setItem("novage_decisions_done", JSON.stringify([...decisionsDone]));
+}
+
 function esconderWelcome() {
   document.getElementById("welcome")?.remove();
 }
@@ -539,9 +609,29 @@ function detectarEstado(texto) {
   return match ? match[1].toUpperCase() : null;
 }
 
+function detectarDecision(texto) {
+  const questionMatch = texto.match(/\[PREGUNTA_DECISIVA:\s*([^\]]+)\]/i);
+  const optionsMatch = texto.match(/\[OPCIONES:\s*([^\]]+)\]/i);
+
+  if (!questionMatch || !optionsMatch) return null;
+
+  const question = questionMatch[1].trim();
+  const options = optionsMatch[1]
+    .split(/\s*\|\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  if (!question || options.length < 2) return null;
+
+  return { question, options };
+}
+
 function limpiarMarcadores(texto) {
   return texto
     .replace(/\[HERRAMIENTA:\s*[^\]]+\]/gi, "")
+    .replace(/\[PREGUNTA_DECISIVA:\s*[^\]]+\]/gi, "")
+    .replace(/\[OPCIONES:\s*[^\]]+\]/gi, "")
     .replace(/\[ESTADO:\s*(?:PREGUNTA|SOLUCION)\]/gi, "")
     .trim();
 }
@@ -599,6 +689,76 @@ function crearTarjetaHerramienta(nombre) {
 
   content.appendChild(actions);
   card.appendChild(content);
+  return card;
+}
+
+function crearDecision(decision, responseId) {
+  const card = document.createElement("div");
+  card.className = "decision-card";
+
+  const label = document.createElement("div");
+  label.className = "decision-label";
+  label.textContent = "Dato decisivo";
+  card.appendChild(label);
+
+  const question = document.createElement("div");
+  question.className = "decision-question";
+  question.textContent = decision.question;
+  card.appendChild(question);
+
+  if (responseId && decisionsDone.has(responseId)) {
+    const status = document.createElement("div");
+    status.className = "decision-status";
+    status.textContent = "Opción respondida. Luna continuó el diagnóstico con tu selección.";
+    card.appendChild(status);
+    return card;
+  }
+
+  const options = document.createElement("div");
+  options.className = "decision-options";
+
+  decision.options.forEach((option, index) => {
+    const button = document.createElement("button");
+    button.className = "decision-btn";
+    button.textContent = option;
+
+    button.addEventListener("click", async () => {
+      if (enviando) return;
+
+      [...options.querySelectorAll("button")].forEach((btn) => {
+        btn.disabled = true;
+        if (btn === button) btn.classList.add("selected");
+      });
+
+      const semanticMessage = [
+        "RESPUESTA A PREGUNTA DECISIVA DE LUNA",
+        `Pregunta: ${decision.question}`,
+        `Respuesta seleccionada por el cliente: ${option}`,
+        "Usa esta respuesta como un hecho confirmado. No vuelvas a preguntar lo mismo. Continúa el análisis y, si ya tienes suficiente información, da el flujo NOVAGE exacto paso a paso."
+      ].join("\n");
+
+      const sent = await enviarMensaje(semanticMessage, {
+        displayText: option,
+        answeredDecisionResponseId: responseId || null
+      });
+
+      if (sent && responseId) {
+        decisionsDone.add(responseId);
+        saveDecisionsDone();
+      }
+
+      if (!sent) {
+        [...options.querySelectorAll("button")].forEach((btn) => {
+          btn.disabled = false;
+          btn.classList.remove("selected");
+        });
+      }
+    });
+
+    options.appendChild(button);
+  });
+
+  card.appendChild(options);
   return card;
 }
 
@@ -685,7 +845,8 @@ function crearFeedback(responseId) {
 
     setTimeout(() => {
       enviarMensaje(
-        "La solución anterior no resolvió mi problema. No repitas el mismo diagnóstico: revisa lo que ya te respondí y haz únicamente las preguntas decisivas que falten para descartar otras causas."
+        "La solución anterior no resolvió mi problema. No repitas el mismo diagnóstico: revisa lo que ya te respondí y haz únicamente las preguntas decisivas que falten para descartar otras causas.",
+        { displayText: "No lo solucionó" }
       );
     }, 450);
   }
@@ -731,7 +892,7 @@ function crearFeedback(responseId) {
   return box;
 }
 
-function renderMensaje(tipo, texto, imagen = null, responseId = null) {
+function renderMensaje(tipo, texto, imagen = null, responseId = null, meta = {}) {
   esconderWelcome();
 
   const row = document.createElement("div");
@@ -751,13 +912,33 @@ function renderMensaje(tipo, texto, imagen = null, responseId = null) {
     bubble.appendChild(img);
   }
 
-  const herramientas = tipo === "ai" ? detectarHerramientas(texto) : [];
-  const estado = tipo === "ai" ? detectarEstado(texto) : null;
+  const herramientas = tipo === "ai"
+    ? (Array.isArray(meta.tools) && meta.tools.length ? meta.tools : detectarHerramientas(texto))
+    : [];
+
+  const estado = tipo === "ai"
+    ? (meta.estado || detectarEstado(texto))
+    : null;
+
+  const decision = tipo === "ai"
+    ? (
+        meta.decision &&
+        typeof meta.decision.question === "string" &&
+        Array.isArray(meta.decision.options)
+          ? meta.decision
+          : detectarDecision(texto)
+      )
+    : null;
+
   const textoLimpio = tipo === "ai" ? limpiarMarcadores(texto) : texto;
 
   const textoDiv = document.createElement("div");
   textoDiv.innerHTML = formatoTexto(textoLimpio);
   bubble.appendChild(textoDiv);
+
+  if (tipo === "ai" && String(estado).toLowerCase() === "question" && decision) {
+    bubble.appendChild(crearDecision(decision, responseId));
+  }
 
   if (tipo === "ai" && herramientas.length) {
     const cards = document.createElement("div");
@@ -773,7 +954,7 @@ function renderMensaje(tipo, texto, imagen = null, responseId = null) {
 
   wrap.appendChild(bubble);
 
-  if (tipo === "ai" && estado === "SOLUCION" && responseId) {
+  if (tipo === "ai" && String(estado).toLowerCase() === "solution" && responseId) {
     wrap.appendChild(crearFeedback(responseId));
   }
 
@@ -890,11 +1071,13 @@ function conversationContextForApi() {
   return conversation.slice(-10).map((item) => ({
     role: item.role,
     text: item.text,
-    hasImage: Boolean(item.hasImage)
+    hasImage: Boolean(item.hasImage),
+    state: item.state || null,
+    decision: item.decision || null
   }));
 }
 
-async function enviarMensaje(mensajeManual = null) {
+async function enviarMensaje(mensajeManual = null, config = {}) {
   if (enviando) return;
 
   const mensaje = (mensajeManual ?? input.value).trim();
@@ -902,13 +1085,20 @@ async function enviarMensaje(mensajeManual = null) {
 
   const imagenActual = selectedImage;
   const textoUsuario = mensaje || "Analiza esta imagen como especialista NOVAGE y dime cuál es el flujo correcto. Si falta un dato decisivo, pregúntamelo antes de concluir.";
+  const textoVisible = (config.displayText || textoUsuario).trim();
   const contextBeforeCurrentTurn = conversationContextForApi();
 
   enviando = true;
   sendButton.disabled = true;
 
-  renderMensaje("user", textoUsuario, imagenActual);
-  conversation.push({ role: "user", text: textoUsuario, hasImage: Boolean(imagenActual) });
+  renderMensaje("user", textoVisible, imagenActual);
+  conversation.push({
+    role: "user",
+    text: textoUsuario,
+    displayText: textoVisible,
+    hasImage: Boolean(imagenActual),
+    answeredDecisionResponseId: config.answeredDecisionResponseId || null
+  });
   saveConversation();
 
   input.value = "";
@@ -949,17 +1139,33 @@ async function enviarMensaje(mensajeManual = null) {
     conversation.push({
       role: "assistant",
       text: answer,
+      displayText: answer,
       hasImage: false,
       responseId: data.responseId || null,
+      state: data.estado || "solution",
+      decision: data.decision || { question: "", options: [] },
+      tools: Array.isArray(data.tools) ? data.tools : [],
       sources
     });
 
     saveConversation();
-    renderMensaje("ai", answer, null, data.responseId || null);
+    renderMensaje(
+      "ai",
+      answer,
+      null,
+      data.responseId || null,
+      {
+        estado: data.estado || "solution",
+        decision: data.decision || { question: "", options: [] },
+        tools: Array.isArray(data.tools) ? data.tools : []
+      }
+    );
+    return true;
   } catch (error) {
     quitarTyping();
     console.error(error);
     renderMensaje("ai", error.message || "Ocurrió un error al conectar con Luna.");
+    return false;
   } finally {
     enviando = false;
     sendButton.disabled = false;
@@ -979,9 +1185,14 @@ function restaurarConversacion() {
   conversation.forEach((item) => {
     renderMensaje(
       item.role === "assistant" ? "ai" : "user",
-      item.text,
+      item.displayText || item.text,
       null,
-      item.responseId || null
+      item.responseId || null,
+      {
+        estado: item.state || null,
+        decision: item.decision || null,
+        tools: Array.isArray(item.tools) ? item.tools : []
+      }
     );
   });
 }
@@ -1006,9 +1217,11 @@ newChat.addEventListener("click", () => {
   previousResponseId = null;
   conversation = [];
   feedbackDone = new Set();
+  decisionsDone = new Set();
   sessionStorage.removeItem("novage_previous_response");
   sessionStorage.removeItem("novage_conversation");
   sessionStorage.removeItem("novage_feedback_done");
+  sessionStorage.removeItem("novage_decisions_done");
   window.location.reload();
 });
 
