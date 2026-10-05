@@ -1,5 +1,5 @@
-// NOVAGE AI • Luna • v4.2
-const KNOWLEDGE_VERSION = "v4.2";
+// NOVAGE AI • Luna • v4.3
+const KNOWLEDGE_VERSION = "v4.3";
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60 * 60 * 1000;
 const KNOWLEDGE_RESULTS = 7;
@@ -427,13 +427,14 @@ Devuelve un campo missing_fact usando SOLO uno de estos valores:
 - none
 
 Y clasifica case_type:
-- detailed_black_background: diseño detallado/texturizado donde el negro es parte de la composición.
+- reference_mockup: el cliente solo tiene una FOTO/MOCKUP/REFERENCIA del producto terminado; el arte está aplicado sobre una prenda, tiene perspectiva, pliegues, sombras, objetos encima o partes ocultas y NO existe un diseño plano utilizable.
+- detailed_black_background: diseño plano/utilizable, detallado o texturizado donde el negro es parte de la composición.
 - white_border_print: bordes/halo blanco tras imprimir DTF.
-- pixelated_design: calidad, pixelado, mejorar vs vectorizar.
+- pixelated_design: calidad, pixelado, mejorar vs vectorizar de un archivo de diseño utilizable.
 - dtf_application: planchado/aplicación DTF, se despega, se agrieta, polvo, tacto, migración.
 - sublimation: sublimación (textil, tazas, rígidos): colores, ghosting, manchas, materiales.
 - vinyl: vinil textil/HTV, corte, depilado, adherencia.
-- file_preparation: fondos, semitransparencias, medidas, plantillas, formatos.
+- file_preparation: fondos, semitransparencias, medidas, plantillas, formatos de un archivo de diseño utilizable.
 - business: precios, costos, márgenes, venta.
 - other: saludo, pregunta general o fuera de tema.
 
@@ -442,6 +443,17 @@ Pregunta solo si la respuesta cambia realmente la ruta. Si Luna puede decidir t�
 Un asesor experto NO pregunta por preguntar: si con lo que ya sabes puedes dar la causa más probable y un plan, devuelve none.
 
 REGLAS OBLIGATORIAS:
+
+0) PRIMERO: ¿EL CLIENTE TIENE UN DISEÑO UTILIZABLE O SOLO UNA REFERENCIA?
+Si la imagen es una fotografía/mockup de una playera o producto terminado y el estampado está deformado por perspectiva, pliegues, sombras, cuerpo de la prenda, manos, zapatos u otros objetos, o partes del arte están ocultas:
+case_type = reference_mockup
+missing_fact = none
+
+NO preguntes color de prenda ni técnica de preparación. Esa foto todavía NO es un archivo de diseño apto para entrar al flujo NOVAGE.
+No clasifiques este caso como detailed_black_background aunque la playera sea negra.
+No asumas que un Mejorador puede reconstruir letras, zonas ocultas, perspectiva o partes faltantes.
+
+Si el usuario sí adjunta el ARTE PLANO/original (sin prenda ni perspectiva), entonces continúa con las demás reglas.
 
 1) DISEÑO DETALLADO / TEXTURIZADO / PINTEREST / FONDO NEGRO
 Si observas un diseño rasterizado, detallado o texturizado donde el negro forma parte importante de la composición o funciona como espacio negativo, y todavía NO está confirmado si la playera será negra:
@@ -505,6 +517,30 @@ El DECISION GATE ya determinó que existe información suficiente. NO hagas preg
 
 MÉTODO INTERNO (no lo escribas): OBSERVAR -> DESCARTAR -> DIAGNOSTICAR -> FLUJO -> COMPROBAR.
 
+======================================================================
+LÍMITE DEL TALLER: FOTO/MOCKUP NO ES UN ARCHIVO DE DISEÑO
+======================================================================
+
+Si CLASIFICACIÓN PREVIA DEL CASO = reference_mockup:
+- La imagen es una REFERENCIA del producto terminado, no un arte listo para preparar/imprimir.
+- NO intentes meterla al flujo del Taller.
+- NO recomiendes recortarla, hacerle upscaling y mandarla a Semitonos como si con eso se recuperara el diseño.
+- NO pidas al cliente principiante que "reconstruya el arte en un editor".
+- NO comprometas a NOVAGE prometiendo que sus herramientas recuperarán perspectiva, letras deformadas, partes ocultas o información que la foto no contiene.
+- El Mejorador con IA y el Mejorador NOVAGE hacen mejora/upscaling de un DISEÑO existente; NO reconstruyen un diseño completo desde una foto de una playera y NO recuperan partes tapadas o deformadas.
+- La recomendación principal es: conseguir el archivo original del cliente/diseñador O recrear/generar primero el diseño plano con una IA de imágenes como ChatGPT o Gemini (u otra herramienta de generación), usando la foto solo como referencia.
+- Una vez que tenga un diseño plano, frontal, completo y limpio, entonces sí puede regresar a NOVAGE para mejorar resolución si hace falta, eliminar fondo, hacer semitonos, ajustar medidas, revisar y crear plantilla.
+- En este caso tools = [] porque todavía NO corresponde abrir una herramienta NOVAGE.
+
+FORMATO PARA reference_mockup:
+Responde BREVE, sin la estructura larga de Diagnóstico/Qué hacer/Cómo comprobarlo.
+Usa 2 a 4 párrafos cortos:
+1. Dile claramente que esa foto no sirve como archivo directo de impresión.
+2. Explica en una frase por qué (perspectiva/pliegues/partes tapadas/sombras).
+3. Recomienda conseguir el original o recrearlo con una IA de imágenes.
+4. Cierra con: cuando tenga el diseño plano, entonces sí empieza el flujo NOVAGE.
+No des una clase de reconstrucción manual.
+
 PRIORIDAD DE EVIDENCIA:
 1. HECHOS CONFIRMADOS POR EL CLIENTE (sección del contexto). Nunca los contradigas ni los ignores.
 2. Lo que observas en la imagen adjunta (puede venir de un turno anterior de la conversación).
@@ -544,11 +580,16 @@ REGLAS:
 - No culpes a NOVAGE, cliente o imprenta sin descartar causas.
 - Si el cliente dijo que una solución anterior NO funcionó: no la repitas; explica qué causa descarta ese resultado y pasa a la siguiente.
 - Usa herramientas NOVAGE solo cuando realmente ayudan; si el problema es de prensa o material, la solución puede no llevar herramienta.
+- Antes de recomendar una herramienta NOVAGE, confirma que el usuario ya tenga un ARCHIVO DE DISEÑO utilizable. Una foto/mockup del producto terminado no es un archivo utilizable.
+- No presentes el Mejorador con IA como reconstrucción generativa: su función dentro de NOVAGE es mejorar/upscale un diseño existente, no inventar las partes que no existen en la fuente.
 
 CASO CLAVE: DISEÑO DETALLADO DE INTERNET/PINTEREST CON FONDO NEGRO + PLAYERA NEGRA CONFIRMADA
+Esta regla SOLO aplica si el usuario tiene una IMAGEN DEL DISEÑO en plano, completa y utilizable.
+NO aplica si solo tiene una foto/mockup de una playera estampada.
 - No vectorizar como primera opción.
 - Aprovechar el negro de la tela para evitar imprimir una gran plasta negra.
-- Si el usuario indicó que la imagen viene de Pinterest/internet, el PRIMER paso debe ser Mejorador con IA para trabajar desde una versión mejorada. Indica que descargue ese archivo mejorado.
+- Si el archivo del DISEÑO viene de Pinterest/internet y ya es un arte plano utilizable, el PRIMER paso puede ser Mejorador con IA para hacer upscaling/mejorar resolución. Indica que descargue ese archivo mejorado.
+- El Mejorador NO reconstruye perspectiva, letras tapadas ni partes faltantes.
 - Después pasar el archivo mejorado por Semitonos Fáciles para un flujo sencillo, o Semitonos Profesionales si necesita mayor control.
 - Explica que el objetivo es conservar textura/detalle y aprovechar el negro de la prenda.
 - Da los pasos en orden 1, 2, 3, 4.
@@ -674,6 +715,7 @@ async function runDecisionGate({ message, image, imageFromContext, sharedContext
             case_type: {
               type: "string",
               enum: [
+                "reference_mockup",
                 "detailed_black_background",
                 "white_border_print",
                 "pixelated_design",
@@ -725,7 +767,7 @@ async function runDecisionGate({ message, image, imageFromContext, sharedContext
       }
     },
     store: false,
-    prompt_cache_key: "novage-decision-gate-v4-2"
+    prompt_cache_key: "novage-decision-gate-v4-3"
   });
 
   const parsed = parseJsonOutput(data, {
@@ -800,7 +842,7 @@ async function runSolution({ message, image, imageFromContext, sharedContext, ga
       }
     },
     store: true,
-    prompt_cache_key: "novage-solution-v4-2",
+    prompt_cache_key: "novage-solution-v4-3",
     metadata: {
       app: "novage-ai",
       knowledge_version: KNOWLEDGE_VERSION
