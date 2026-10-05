@@ -72,6 +72,7 @@ function sanitizeConversation(conversation) {
           typeof item.decision.question === "string" &&
           Array.isArray(item.decision.options)
             ? {
+                key: typeof item.decision.key === "string" ? item.decision.key.slice(0, 80) : null,
                 question: redactPII(item.decision.question).slice(0, 800),
                 options: item.decision.options
                   .filter((value) => typeof value === "string")
@@ -98,7 +99,7 @@ function conversationToText(conversation) {
 
       const stateNote = item.state ? `\n[Estado de Luna: ${item.state}]` : "";
       const decisionNote = item.decision?.question
-        ? `\n[Pregunta decisiva: ${item.decision.question} | Opciones: ${item.decision.options.join(" | ")}]`
+        ? `\n[Pregunta decisiva${item.decision.key ? ` (${item.decision.key})` : ""}: ${item.decision.question} | Opciones: ${item.decision.options.join(" | ")}]`
         : "";
       const toolsNote = item.tools?.length
         ? `\n[Herramientas sugeridas: ${item.tools.join(", ")}]`
@@ -216,7 +217,7 @@ TÉRMINOS DE BÚSQUEDA:
       reasoning: { effort: "medium" },
       max_output_tokens: 1900,
       store: false,
-      prompt_cache_key: "novage-case-curator-v4",
+      prompt_cache_key: "novage-case-curator-v4-1",
     }),
   });
 
@@ -296,7 +297,7 @@ async function uploadCaseFile(caseText, responseId, customerNote) {
           created_date: now.toISOString().slice(0, 10),
           has_customer_note: Boolean(String(customerNote || "").trim()),
           response_id: String(responseId || "unknown").slice(0, 512),
-          knowledge_version: "v4",
+          knowledge_version: "v4.1",
         },
       }),
     }
