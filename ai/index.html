@@ -850,8 +850,9 @@ function crearFeedback(responseId) {
         true
       );
     } catch (error) {
-      console.error(error);
-      setStatus("No pude guardar el caso. Puedes seguir usando Luna normalmente.");
+      console.error("NOVAGE feedback:", error);
+      const detalle = String(error?.message || "Error desconocido").slice(0, 500);
+      setStatus(`No pude guardar el caso. Detalle: ${detalle}`);
     }
   }
 
