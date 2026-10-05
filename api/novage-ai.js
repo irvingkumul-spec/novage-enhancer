@@ -1,15 +1,10 @@
-// NOVAGE AI • Luna • v4.3
-const KNOWLEDGE_VERSION = "v4.3";
+// NOVAGE AI • Shopify / Vercel backend • v5.0
+// Sin guardado de chats, sin feedback, sin memoria colectiva.
+// Mantiene solo el contexto de la conversación ACTUAL que envía el frontend.
+
 const RATE_LIMIT = 30;
 const WINDOW_MS = 60 * 60 * 1000;
 const KNOWLEDGE_RESULTS = 7;
-const CASE_RESULTS = 5;
-const CASE_MIN_SCORE = 0.28;
-// Máximo de preguntas decisivas seguidas antes de obligar a resolver.
-const MAX_QUESTIONS_IN_ROW = 3;
-// Detecta color de prenda escrito en texto libre ("playera negra", "camisa de color blanco").
-const GARMENT_COLOR_REGEX =
-  /\b(playera|camiseta|camisa|prenda|sudadera|hoodie|polo|blusa|tela|gorra|bolsa)s?\s+(?:de\s+color\s+|color\s+)?(negr[ao]s?|blanc[ao]s?|gris(?:es)?|roj[ao]s?|azul(?:es)?|verdes?|amarill[ao]s?|rosas?|beige|crema|marino|vino|caf[eé])(?![a-záéíóúñ])/i;
 
 const usage = globalThis.__NOVAGE_AI_USAGE__ || new Map();
 globalThis.__NOVAGE_AI_USAGE__ = usage;
@@ -24,7 +19,6 @@ const TOOL_NAMES = [
   "Contraer Bordes",
   "Redimensionador",
   "Crear Plantilla DTF",
-  "Armador de Plantilla DTF",
   "Mockups",
   "Pedrería",
   "Calculadora de Precios",
@@ -41,35 +35,41 @@ const TOOL_NAMES = [
 const DECISIONS = {
   garment_black: {
     message:
-      "Es un diseño detallado y texturizado, así que no lo vectorizaría como primer paso. Para elegir la preparación correcta solo necesito confirmar el color de la prenda.",
+      "El color de la prenda cambia por completo cómo conviene preparar este diseño.",
     question: "¿La playera será negra?",
     options: ["Sí", "No"]
   },
   template_source: {
     message:
-      "Antes de atribuir el borde blanco a los semitonos o a la impresión, necesito reconstruir cómo se preparó la plantilla final.",
-    question: "¿Dónde creaste la plantilla final de impresión?",
-    options: ["Crear Plantilla NOVAGE", "Canva", "Photoshop", "Otra aplicación"]
+      "Antes de culpar al archivo o a la impresión, necesito saber dónde se armó la plantilla final.",
+    question: "¿Dónde creaste la plantilla final?",
+    options: ["NOVAGE", "Canva", "Photoshop", "Otra app"]
   },
   final_scan: {
     message:
-      "Como la plantilla se creó fuera de NOVAGE, lo importante es saber si revisaste el archivo final ya exportado, porque al componer o exportar pueden aparecer semitransparencias nuevamente.",
-    question: "¿Pasaste la plantilla FINAL por Semitransparencias o Escáner DTF?",
+      "Si la plantilla se creó fuera de NOVAGE, importa saber si revisaste el archivo final exportado.",
+    question: "¿Revisaste la plantilla FINAL con Semitransparencias o Escáner DTF?",
     options: ["Sí", "No", "No estoy seguro"]
   },
   white_border_pattern: {
     message:
-      "Ya tenemos suficiente información del flujo. Ahora necesito distinguir si el blanco se comporta como un residuo del archivo o como un desregistro de la tinta blanca.",
-    question: "¿Cómo aparece el borde blanco en la impresión?",
-    options: ["Principalmente de un solo lado", "Rodea todo el contorno", "No estoy seguro"]
+      "La forma en que aparece el blanco ayuda a saber si viene del archivo o de la impresión.",
+    question: "¿Cómo aparece el borde blanco?",
+    options: ["De un solo lado", "Alrededor de todo", "No estoy seguro"]
   },
   design_type: {
     message:
-      "Para decidir correctamente entre mejorar y vectorizar necesito saber qué tipo de diseño estás trabajando.",
+      "El tipo de diseño define si conviene mejorar o vectorizar.",
     question: "¿Qué tipo de diseño es?",
-    options: ["Logo o texto", "Foto / anime / ilustración detallada", "Gráfico plano", "No estoy seguro"]
+    options: ["Logo o texto", "Foto / anime / ilustración", "Gráfico plano", "No estoy seguro"]
   }
 };
+
+const GARMENT_COLOR_REGEX =
+  /\b(playera|camiseta|camisa|prenda|sudadera|hoodie|polo|blusa|tela|gorra|bolsa)s?\s+(?:de\s+color\s+|color\s+)?(negr[ao]s?|blanc[ao]s?|gris(?:es)?|roj[ao]s?|azul(?:es)?|verdes?|amarill[ao]s?|rosas?|beige|crema|marino|vino|caf[eé])(?![a-záéíóúñ])/i;
+
+const DISSATISFACTION_REGEX =
+  /\b(no\s+me\s+(?:resolvi[oó]|sirvi[oó]|ayud[oó])|no\s+lo\s+(?:resolvi[oó]|solucion[oó])|sigue\s+igual|no\s+funcion[oó])\b/i;
 
 function getClientIp(req) {
   const forwarded = req.headers["x-forwarded-for"];
@@ -94,6 +94,33 @@ function checkRateLimit(ip) {
   return { allowed: true, remaining: RATE_LIMIT - current.count };
 }
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+
+  if (
+    origin === "https://novage.store" ||
+    origin === "https://www.novage.store" ||
+    origin === "https://tools.novage.store"
+  ) {
+    return true;
+  }
+
+  return /^https:\/\/[a-z0-9-]+\.myshopify\.com$/i.test(origin);
+}
+
+function setCors(req, res) {
+  const origin = String(req.headers.origin || "");
+
+  if (origin && isAllowedOrigin(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Max-Age", "86400");
+}
+
 function extractText(data) {
   const texts = [];
 
@@ -110,10 +137,6 @@ function extractText(data) {
 
 function parseJsonOutput(data, fallback = {}) {
   const raw = extractText(data);
-
-  if (data?.status === "incomplete") {
-    console.error("NOVAGE respuesta incompleta:", data?.incomplete_details);
-  }
 
   try {
     return JSON.parse(raw);
@@ -168,33 +191,16 @@ function cleanConversationContext(value) {
 function conversationAsText(conversation) {
   return conversation
     .map((item) => {
-      const label = item.role === "assistant" ? "LUNA" : "CLIENTE";
+      const label = item.role === "assistant" ? "NOVAGE" : "CLIENTE";
       const image = item.hasImage ? " [adjuntó imagen]" : "";
       const state = item.state ? ` [estado=${item.state}]` : "";
       const decision = item.decision?.question
-        ? `\nPregunta decisiva previa: ${item.decision.question} | opciones: ${item.decision.options.join(" | ")}`
+        ? `\nPregunta previa: ${item.decision.question} | opciones: ${item.decision.options.join(" | ")}`
         : "";
+
       return `${label}${image}${state}: ${item.text || item.displayText}${decision}`;
     })
     .join("\n");
-}
-
-function resolvedFactsFromText(text) {
-  const normalized = String(text || "").toLowerCase();
-  const facts = new Set();
-
-  if (normalized.includes("pregunta: ¿la playera será negra?")) facts.add("garment_black");
-  if (normalized.includes("pregunta: ¿dónde creaste la plantilla final de impresión?")) facts.add("template_source");
-  if (normalized.includes("pregunta: ¿pasaste la plantilla final por semitransparencias o escáner dtf?")) facts.add("final_scan");
-  if (normalized.includes("pregunta: ¿cómo aparece el borde blanco en la impresión?")) facts.add("white_border_pattern");
-  if (normalized.includes("pregunta: ¿qué tipo de diseño es?")) facts.add("design_type");
-
-  // Genérico: cualquier respuesta por botón incluye "Variable: <key>" (canónicas y personalizadas).
-  for (const match of normalized.matchAll(/^variable:\s*([a-z0-9_]+)\s*$/gm)) {
-    if (match[1] !== "unknown") facts.add(match[1]);
-  }
-
-  return facts;
 }
 
 function parseDecisionAnswer(text) {
@@ -203,13 +209,13 @@ function parseDecisionAnswer(text) {
 
   const key = value.match(/^Variable:\s*(.+)$/im)?.[1]?.trim() || "";
   const question = value.match(/^Pregunta:\s*(.+)$/im)?.[1]?.trim() || "";
-  const answer = value.match(/^Respuesta seleccionada por el cliente:\s*(.+)$/im)?.[1]?.trim() || "";
+  const answer =
+    value.match(/^Respuesta seleccionada por el cliente:\s*(.+)$/im)?.[1]?.trim() || "";
 
   if (!question || !answer) return null;
   return { key, question, answer };
 }
 
-// Recorre la conversación + mensaje actual como una sola lista de turnos.
 function allTurns(currentMessage, conversation) {
   return [...conversation, { role: "user", text: currentMessage || "" }];
 }
@@ -217,72 +223,46 @@ function allTurns(currentMessage, conversation) {
 function collectResolvedFacts(currentMessage, conversation) {
   const facts = new Set();
   const turns = allTurns(currentMessage, conversation);
-  const all = turns.map((item) => item.text || "").join("\n");
 
-  for (const fact of resolvedFactsFromText(all)) facts.add(fact);
+  for (const item of turns) {
+    if (item.role !== "user" || !item.text) continue;
 
-  // Respuesta escrita a mano (sin botón) a una pregunta decisiva: también la resuelve.
-  for (let i = 1; i < turns.length; i += 1) {
-    const item = turns[i];
-    const prev = turns[i - 1];
-    if (
-      item.role === "user" &&
-      item.text &&
-      !parseDecisionAnswer(item.text) &&
-      prev?.role === "assistant" &&
-      prev.state === "question" &&
-      prev.decision?.key
-    ) {
-      facts.add(prev.decision.key);
-    }
+    const parsed = parseDecisionAnswer(item.text);
+    if (parsed?.key) facts.add(parsed.key);
+
+    const lower = item.text.toLowerCase();
+    if (lower.includes("pregunta: ¿la playera será negra?")) facts.add("garment_black");
+    if (lower.includes("pregunta: ¿dónde creaste la plantilla final?")) facts.add("template_source");
+    if (lower.includes("pregunta: ¿revisaste la plantilla final")) facts.add("final_scan");
+    if (lower.includes("pregunta: ¿cómo aparece el borde blanco?")) facts.add("white_border_pattern");
+    if (lower.includes("pregunta: ¿qué tipo de diseño es?")) facts.add("design_type");
   }
 
-  // El cliente ya escribió el color de la prenda.
   const userText = turns
     .filter((item) => item.role === "user")
     .map((item) => item.text || "")
     .join("\n");
+
   if (GARMENT_COLOR_REGEX.test(userText)) facts.add("garment_black");
 
   return facts;
 }
 
-// Hechos confirmados en lenguaje claro para que la solución NO los ignore.
 function buildConfirmedFacts(currentMessage, conversation) {
   const facts = [];
-  const turns = allTurns(currentMessage, conversation);
 
-  for (let i = 0; i < turns.length; i += 1) {
-    const item = turns[i];
+  for (const item of allTurns(currentMessage, conversation)) {
     if (item.role !== "user" || !item.text) continue;
 
     const parsed = parseDecisionAnswer(item.text);
     if (parsed) {
       facts.push(`- ${parsed.question} → ${parsed.answer}`);
-      continue;
-    }
-
-    const prev = turns[i - 1];
-    if (prev?.role === "assistant" && prev.state === "question" && prev.decision?.question) {
-      facts.push(`- ${prev.decision.question} → (respondió escribiendo) ${item.text.slice(0, 300)}`);
     }
   }
 
   return [...new Set(facts)];
 }
 
-function questionsInRow(conversation) {
-  let count = 0;
-  for (let i = conversation.length - 1; i >= 0; i -= 1) {
-    const item = conversation[i];
-    if (item.role !== "assistant") continue;
-    if (item.state === "question") count += 1;
-    else break;
-  }
-  return count;
-}
-
-// Limpia el texto técnico de respuestas por botón para no ensuciar la búsqueda.
 function retrievalText(text) {
   const parsed = parseDecisionAnswer(text);
   if (parsed) return `${parsed.question} ${parsed.answer}`;
@@ -290,36 +270,28 @@ function retrievalText(text) {
 }
 
 function buildRetrievalQuery(message, conversation) {
-  const firstUser = conversation.find((item) => item.role === "user");
   const recent = conversation
     .slice(-8)
     .map(
       (item) =>
-        `${item.role === "assistant" ? "LUNA" : "CLIENTE"}: ${retrievalText(item.text || item.displayText).slice(0, 700)}`
+        `${item.role === "assistant" ? "NOVAGE" : "CLIENTE"}: ${retrievalText(
+          item.text || item.displayText
+        ).slice(0, 700)}`
     )
     .join("\n");
 
   return [
-    "Consulta actual del cliente:",
+    "Consulta actual:",
     retrievalText(message),
-    firstUser ? `\nProblema original:\n${retrievalText(firstUser.text).slice(0, 1500)}` : "",
     recent ? `\nContexto reciente:\n${recent}` : "",
-    "\nBusca conocimiento útil para diagnosticar, elegir la técnica NOVAGE correcta y descartar causas."
+    "\nBusca solo información útil para resolver el problema de forma simple y correcta."
   ]
     .filter(Boolean)
     .join("\n")
-    .slice(0, 14000);
+    .slice(0, 12000);
 }
 
-async function searchVectorStore(vectorStoreId, query, options = {}) {
-  const body = {
-    query,
-    max_num_results: options.maxResults || 5,
-    rewrite_query: true
-  };
-
-  if (options.filters) body.filters = options.filters;
-
+async function searchVectorStore(vectorStoreId, query, maxResults = 7) {
   const response = await fetch(
     `https://api.openai.com/v1/vector_stores/${encodeURIComponent(vectorStoreId)}/search`,
     {
@@ -328,14 +300,18 @@ async function searchVectorStore(vectorStoreId, query, options = {}) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        query,
+        max_num_results: maxResults,
+        rewrite_query: true
+      })
     }
   );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.error?.message || "No se pudo consultar el Vector Store.");
+    throw new Error(data?.error?.message || "No se pudo consultar NOVAGE KNOWLEDGE.");
   }
 
   return Array.isArray(data.data) ? data.data : [];
@@ -349,28 +325,17 @@ function resultText(result) {
     .trim();
 }
 
-function formatSearchResults(results, options = {}) {
-  const maxChars = options.maxChars || 12000;
-  const minScore = options.minScore ?? 0;
+function formatSearchResults(results, maxChars = 14000) {
   const chunks = [];
   let used = 0;
 
   for (const result of results || []) {
-    const score = Number(result?.score || 0);
-    if (score < minScore) continue;
-
     const text = resultText(result);
     if (!text) continue;
 
-    const filename = result?.filename || "archivo-sin-nombre";
-    const attrs = result?.attributes || {};
-    const attrsText = Object.keys(attrs).length
-      ? ` | atributos=${JSON.stringify(attrs)}`
-      : "";
+    const block = `FUENTE: ${result?.filename || "NOVAGE KNOWLEDGE"}\n${text}`;
 
-    const block = `FUENTE: ${filename} | similitud=${score.toFixed(3)}${attrsText}\n${text}`;
     if (used + block.length > maxChars) break;
-
     chunks.push(block);
     used += block.length;
   }
@@ -378,247 +343,156 @@ function formatSearchResults(results, options = {}) {
   return chunks.join("\n\n---\n\n");
 }
 
-function compactHitMetadata(results, minScore = 0) {
-  return (results || [])
-    .filter((item) => Number(item?.score || 0) >= minScore)
-    .slice(0, 8)
-    .map((item) => ({
-      filename: item?.filename || null,
-      score: Number(Number(item?.score || 0).toFixed(3)),
-      attributes: item?.attributes || null
-    }));
+function slugKey(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 50);
 }
 
-function buildSharedContext(officialContext, solvedCasesContext, conversation, confirmedFacts = []) {
-  return `
-======================================================================
-HECHOS CONFIRMADOS POR EL CLIENTE (tienen prioridad, no los vuelvas a preguntar)
-======================================================================
-${confirmedFacts.length ? confirmedFacts.join("\n") : "Ninguno todavía."}
+function buildCustomDecision(parsed, resolvedFacts) {
+  const slug = slugKey(parsed?.custom_key);
+  const question = String(parsed?.custom_question || "").trim().slice(0, 200);
+  const message = String(parsed?.custom_message || "").trim().slice(0, 300);
+  const options = [
+    ...new Set(
+      (Array.isArray(parsed?.custom_options) ? parsed.custom_options : [])
+        .filter((value) => typeof value === "string")
+        .map((value) => value.trim().slice(0, 60))
+        .filter(Boolean)
+    )
+  ].slice(0, 4);
 
-======================================================================
-CONTEXTO OFICIAL NOVAGE RECUPERADO
-======================================================================
-${officialContext || "No se recuperaron fragmentos oficiales específicos. No inventes información NOVAGE."}
+  if (!slug || !question || options.length < 2) return null;
 
-======================================================================
-CASOS REALES CONFIRMADOS PARECIDOS
-======================================================================
-${solvedCasesContext || "No se recuperaron casos confirmados suficientemente parecidos. No fuerces analogías."}
+  const key = `custom_${slug}`;
+  if (resolvedFacts.has(key) || resolvedFacts.has(slug)) return null;
 
-======================================================================
-CONTEXTO RECIENTE DE LA CONVERSACIÓN
-======================================================================
-${conversationAsText(conversation) || "Sin contexto previo."}
-`;
+  return {
+    key,
+    message: message || "Necesito un dato para darte la recomendación correcta.",
+    question,
+    options
+  };
 }
 
 const GATE_INSTRUCTIONS = `
-Eres el DECISION GATE de Luna, NOVAGE AI.
-NO das la solución. Tu única tarea es decidir si falta UN dato que cambiaría materialmente el diagnóstico o el flujo recomendado.
+Eres el DECISION GATE de NOVAGE AI.
 
-Devuelve un campo missing_fact usando SOLO uno de estos valores:
+NO das soluciones. Solo decides si falta UN dato que realmente cambia la recomendación.
+
+case_type:
+- reference_only_art: el cliente NO tiene el diseño plano; solo tiene foto/mockup/captura de una prenda o producto con el estampado aplicado, con perspectiva, pliegues, objetos tapando o partes faltantes.
+- detailed_black_background: diseño plano detallado/texturizado donde el negro forma parte importante de la composición.
+- white_border_print: borde/halo blanco después de imprimir DTF.
+- pixelated_design: pixelado, calidad, mejorar vs vectorizar.
+- dtf_application: adherencia, planchado, lavado, film, polvo.
+- sublimation
+- vinyl
+- file_preparation
+- business
+- other
+
+missing_fact:
 - garment_black
 - template_source
 - final_scan
 - white_border_pattern
 - design_type
-- custom   (pregunta personalizada, ver regla 7)
+- custom
 - none
 
-Y clasifica case_type:
-- reference_mockup: el cliente solo tiene una FOTO/MOCKUP/REFERENCIA del producto terminado; el arte está aplicado sobre una prenda, tiene perspectiva, pliegues, sombras, objetos encima o partes ocultas y NO existe un diseño plano utilizable.
-- detailed_black_background: diseño plano/utilizable, detallado o texturizado donde el negro es parte de la composición.
-- white_border_print: bordes/halo blanco tras imprimir DTF.
-- pixelated_design: calidad, pixelado, mejorar vs vectorizar de un archivo de diseño utilizable.
-- dtf_application: planchado/aplicación DTF, se despega, se agrieta, polvo, tacto, migración.
-- sublimation: sublimación (textil, tazas, rígidos): colores, ghosting, manchas, materiales.
-- vinyl: vinil textil/HTV, corte, depilado, adherencia.
-- file_preparation: fondos, semitransparencias, medidas, plantillas, formatos de un archivo de diseño utilizable.
-- business: precios, costos, márgenes, venta.
-- other: saludo, pregunta general o fuera de tema.
+REGLAS:
+1. Si case_type = reference_only_art, missing_fact = none. No interrogues. La solución será explicar que esa foto sirve como referencia, no como archivo de impresión.
+2. Si el diseño plano es detallado, tiene fondo negro integrado y aún no se sabe el color de la prenda: garment_black.
+3. Bordes blancos: pregunta primero template_source; después final_scan si fue app externa; después white_border_pattern si todavía cambia el diagnóstico.
+4. Si mejorar vs vectorizar no se puede saber sin conocer el tipo de diseño y no hay imagen suficiente: design_type.
+5. custom solo si existe UN dato que el cliente sabe y que cambia realmente la ruta.
+6. No preguntes qué herramienta quiere usar.
+7. No preguntes algo visible en la imagen.
+8. Si el dato ya fue contestado, no lo vuelvas a preguntar.
+9. Máximo una pregunta.
 
-PRINCIPIO:
-Pregunta solo si la respuesta cambia realmente la ruta. Si Luna puede decidir técnicamente con lo que ve y sabe, devuelve none.
-Un asesor experto NO pregunta por preguntar: si con lo que ya sabes puedes dar la causa más probable y un plan, devuelve none.
-
-REGLAS OBLIGATORIAS:
-
-0) PRIMERO: ¿EL CLIENTE TIENE UN DISEÑO UTILIZABLE O SOLO UNA REFERENCIA?
-Si la imagen es una fotografía/mockup de una playera o producto terminado y el estampado está deformado por perspectiva, pliegues, sombras, cuerpo de la prenda, manos, zapatos u otros objetos, o partes del arte están ocultas:
-case_type = reference_mockup
-missing_fact = none
-
-NO preguntes color de prenda ni técnica de preparación. Esa foto todavía NO es un archivo de diseño apto para entrar al flujo NOVAGE.
-No clasifiques este caso como detailed_black_background aunque la playera sea negra.
-No asumas que un Mejorador puede reconstruir letras, zonas ocultas, perspectiva o partes faltantes.
-
-Si el usuario sí adjunta el ARTE PLANO/original (sin prenda ni perspectiva), entonces continúa con las demás reglas.
-
-1) DISEÑO DETALLADO / TEXTURIZADO / PINTEREST / FONDO NEGRO
-Si observas un diseño rasterizado, detallado o texturizado donde el negro forma parte importante de la composición o funciona como espacio negativo, y todavía NO está confirmado si la playera será negra:
-missing_fact = garment_black
-No preguntes si quiere quitar el fondo. No preguntes qué técnica quiere usar.
-
-Si ya está confirmado que la playera será negra o no, NO vuelvas a preguntar garment_black.
-
-2) BORDES BLANCOS DESPUÉS DE IMPRIMIR
-Si el usuario reporta bordes blancos y todavía no sabes dónde creó la plantilla final:
-missing_fact = template_source
-
-Si ya sabes que la plantilla se creó en Canva, Photoshop u otra aplicación externa y todavía no sabes si revisó LA PLANTILLA FINAL exportada con Semitransparencias o Escáner DTF:
-missing_fact = final_scan
-
-Si la plantilla fue creada con Crear Plantilla NOVAGE, o si fue externa pero ya confirmó que la plantilla FINAL fue revisada/limpiada, y todavía no sabes si el blanco aparece de un solo lado o rodea todo:
-missing_fact = white_border_pattern
-
-3) DISEÑO PIXELADO SIN IMAGEN NI TIPO CLARO
-Si el usuario pregunta si debe mejorar o vectorizar, pero no hay imagen y no sabes si es logo/texto/plano o foto/anime/detallado:
-missing_fact = design_type
-
-Si hay imagen suficiente para identificar el tipo, NO preguntes design_type.
-
-4) NO REPETIR
-Si el contexto contiene una respuesta explícita a una pregunta decisiva previa, esa variable ya está resuelta. No la vuelvas a preguntar.
-
-5) MÁXIMO UNA PREGUNTA
-Nunca intentes pedir dos datos en el mismo turno.
-
-6) SI NO FALTA UN DATO QUE CAMBIE LA RUTA
-missing_fact = none
-Preguntas teóricas ("¿qué es...?", "¿diferencia entre...?"), saludos y precios generales -> none.
-
-7) PREGUNTA PERSONALIZADA (custom)
-Usa missing_fact = custom SOLO cuando el caso NO encaja en las variables canónicas y existe UN dato que el cliente conoce, que tú no puedes observar ni deducir, y cuya respuesta cambia la causa o la ruta.
-Ejemplos válidos:
-- "Se me despegó el estampado" sin decir la técnica -> ¿Qué técnica usaste? | DTF | Sublimación | Vinil textil | Otra
-- DTF que se despega sin saber cuándo -> ¿Cuándo se despegó? | Al retirar el film | En el primer lavado | Tras varios lavados
-- Sublimación con colores apagados sin saber el material -> ¿De qué material es la prenda? | 100% poliéster | Mezcla con algodón | Algodón | No lo sé
-Reglas de custom:
-- custom_key: snake_case descriptivo y estable (ej. tecnica_usada, momento_despegue, material_prenda).
-- custom_question: una sola pregunta corta y clara para principiante.
-- custom_options: 2 a 4 opciones, máximo 5 palabras cada una.
-- custom_message: 1 o 2 frases en tono asesor NOVAGE explicando POR QUÉ ese dato cambia el diagnóstico. Sin listar todas las ramas.
-- Nunca preguntes qué herramienta o técnica QUIERE usar el cliente: eso lo decide Luna.
-Si missing_fact NO es custom: custom_key, custom_question y custom_message = "" y custom_options = [].
-
-8) DATOS DADOS EN TEXTO LIBRE
-Si el cliente ya escribió el dato (ej. "es para playera negra", "la armé en Canva", "es 100% poliéster"), considéralo resuelto aunque no haya usado botones.
-
-No escribas la pregunta canónica al usuario. El servidor la generará de forma canónica.
+Si missing_fact != custom, los campos custom_* deben ir vacíos.
 `;
 
 const SOLUTION_INSTRUCTIONS = `
-Eres Luna, asesora técnica senior de NOVAGE. Hablas como alguien que ha preparado e impreso miles de trabajos: DTF, sublimación, vinil textil, DTG, serigrafía básica, preparación de archivos, semitonos, semitransparencias, vectorización, fondos, plantillas y diagnóstico de errores de producción.
+Eres NOVAGE AI, el asistente experto del Taller Digital de NOVAGE.
 
-Tu trabajo NO es conversar: es DIAGNOSTICAR y decirle al cliente EXACTAMENTE qué hacer y cómo comprobarlo.
+Tu prioridad es que cualquier principiante entienda QUÉ hacer, CUÁNDO hacerlo y POR QUÉ.
+No intentes demostrar conocimiento técnico. Resuelve.
 
-El DECISION GATE ya determinó que existe información suficiente. NO hagas preguntas. Si falta un dato menor, decláralo como supuesto en una línea ("Asumo que ...; si no es así, dímelo y ajusto.") y resuelve igual.
+ESTILO:
+- Respuestas concretas.
+- Normalmente 60 a 140 palabras.
+- Máximo 4 pasos.
+- Frases cortas.
+- Usa palabras comunes.
+- Si usas un término técnico, explícalo en la misma frase.
+- No repitas lo que el cliente ya dijo.
+- No uses una estructura larga obligatoria de "Diagnóstico / Cómo comprobar / Si no se corrige" salvo que realmente haga falta.
+- No des 3 soluciones si una es claramente la correcta.
+- No llenes la respuesta de advertencias.
 
-MÉTODO INTERNO (no lo escribas): OBSERVAR -> DESCARTAR -> DIAGNOSTICAR -> FLUJO -> COMPROBAR.
+LÍMITES IMPORTANTES:
+- Hay archivos que sí se pueden preparar y otros que primero necesitan un diseño correcto.
+- Si una foto, mockup o captura NO contiene el arte plano completo, dilo claramente:
+  "Esta imagen sirve como referencia, pero no como archivo directo para impresión."
+- No mandes a un principiante a "reconstruir en Photoshop".
+- Si no existe el arte original, recomienda conseguirlo o recrearlo con una IA de imágenes como ChatGPT o Gemini usando la foto como referencia.
+- Solo DESPUÉS de tener un diseño plano, completo y limpio se recomienda entrar al flujo NOVAGE.
+- El Mejorador con IA de NOVAGE sirve para mejorar/upscale de un DISEÑO EXISTENTE. No reconstruye partes ocultas, no elimina perspectiva y no inventa un diseño completo desde una foto de una playera.
+- No comprometas al Taller con un resultado que sus herramientas no pueden producir.
 
-======================================================================
-LÍMITE DEL TALLER: FOTO/MOCKUP NO ES UN ARCHIVO DE DISEÑO
-======================================================================
+CUANDO ALGO NO ES CONVENIENTE:
+No des vueltas. Di:
+- qué no conviene;
+- por qué;
+- qué necesita hacer antes.
 
-Si CLASIFICACIÓN PREVIA DEL CASO = reference_mockup:
-- La imagen es una REFERENCIA del producto terminado, no un arte listo para preparar/imprimir.
-- NO intentes meterla al flujo del Taller.
-- NO recomiendes recortarla, hacerle upscaling y mandarla a Semitonos como si con eso se recuperara el diseño.
-- NO pidas al cliente principiante que "reconstruya el arte en un editor".
-- NO comprometas a NOVAGE prometiendo que sus herramientas recuperarán perspectiva, letras deformadas, partes ocultas o información que la foto no contiene.
-- El Mejorador con IA y el Mejorador NOVAGE hacen mejora/upscaling de un DISEÑO existente; NO reconstruyen un diseño completo desde una foto de una playera y NO recuperan partes tapadas o deformadas.
-- La recomendación principal es: conseguir el archivo original del cliente/diseñador O recrear/generar primero el diseño plano con una IA de imágenes como ChatGPT o Gemini (u otra herramienta de generación), usando la foto solo como referencia.
-- Una vez que tenga un diseño plano, frontal, completo y limpio, entonces sí puede regresar a NOVAGE para mejorar resolución si hace falta, eliminar fondo, hacer semitonos, ajustar medidas, revisar y crear plantilla.
-- En este caso tools = [] porque todavía NO corresponde abrir una herramienta NOVAGE.
+EJEMPLO:
+"Este diseño no se puede preparar bien solo quitando el fondo o creando semitonos. El negro forma parte de la composición. Para una playera de otro color necesitas una versión adaptada del diseño. Primero consigue o genera esa versión; después ya puedes usar NOVAGE para mejorarla, ajustar medidas y preparar la plantilla."
 
-FORMATO PARA reference_mockup:
-Responde BREVE, sin la estructura larga de Diagnóstico/Qué hacer/Cómo comprobarlo.
-Usa 2 a 4 párrafos cortos:
-1. Dile claramente que esa foto no sirve como archivo directo de impresión.
-2. Explica en una frase por qué (perspectiva/pliegues/partes tapadas/sombras).
-3. Recomienda conseguir el original o recrearlo con una IA de imágenes.
-4. Cierra con: cuando tenga el diseño plano, entonces sí empieza el flujo NOVAGE.
-No des una clase de reconstrucción manual.
+SI EL CLIENTE DICE QUE LA RESPUESTA ANTERIOR NO LE RESOLVIÓ:
+- Empieza con una disculpa corta: "Lamento que no te haya resuelto."
+- NO repitas la misma explicación.
+- Identifica el límite real.
+- Si el resultado que quiere no es posible con el archivo actual, dilo claramente.
+- Da solo la alternativa útil.
 
-PRIORIDAD DE EVIDENCIA:
-1. HECHOS CONFIRMADOS POR EL CLIENTE (sección del contexto). Nunca los contradigas ni los ignores.
-2. Lo que observas en la imagen adjunta (puede venir de un turno anterior de la conversación).
-3. Conocimiento oficial NOVAGE recuperado.
-4. Casos reales confirmados parecidos (solo si coinciden las señales clave).
-5. Conocimiento profesional general.
+CASOS CLAVE:
+1. Diseño plano detallado + fondo negro + playera negra:
+   - aprovechar negro de la prenda;
+   - si la imagen es de baja calidad, Mejorador con IA;
+   - después Semitonos Fáciles o Pro;
+   - evitar imprimir una gran masa negra.
 
-FORMATO OBLIGATORIO del campo message (títulos en **negritas**, sin #, sin tablas, sin emojis):
+2. Diseño plano detallado + fondo negro + playera NO negra:
+   - no eliminar el negro automáticamente;
+   - si el negro define el diseño, necesita una versión adaptada para ese color de prenda;
+   - si no tiene esa versión, puede generarla/recrearla con una IA de imágenes y luego trabajarla en NOVAGE.
 
-**Diagnóstico:** 1 a 3 frases. Causa más probable y POR QUÉ: qué señal concreta la delata. Si hay imagen, menciona algo específico que viste en ella.
+3. Solo foto/mockup de una playera:
+   - no usar Mejorador, Semitonos o Eliminador todavía;
+   - conseguir/recrear primero el arte plano;
+   - tools = [].
 
-**Qué hacer:**
-1. Paso concreto que empieza con verbo (Sube, Descarga, Activa, Plancha, Revisa...). Nombra la herramienta NOVAGE o el ajuste exacto.
-2. ...
-(3 a 6 pasos, en el orden real de trabajo)
+4. Mejorar vs vectorizar:
+   - foto/anime/arte complejo -> Mejorador con IA.
+   - logo/texto/gráfico plano/pocos colores -> Vectorizador NOVAGE.
 
-**Cómo comprobarlo:** 1 o 2 frases con la prueba rápida que confirma que quedó bien ANTES de producir en serie.
+5. Bordes blancos:
+   - no recomendar Contraer Bordes automáticamente;
+   - si el blanco está corrido hacia un lado y el archivo final estaba limpio, sospechar impresión/desfase de tinta blanca;
+   - si rodea todo el borde, revisar archivo, semitransparencias o residuos.
 
-**Si no se corrige:** 1 frase con la siguiente causa más probable y qué revisar.
-
-EXCEPCIÓN: preguntas teóricas o simples ("¿qué es...?", "¿diferencia entre...?") se responden directo en 2 a 4 frases, sin el formato completo.
-
-TONO NOVAGE:
-- Tutea. Directa, segura, cercana, cero relleno. Como un maestro de taller que sabe y lo explica fácil.
-- Prohibido: "¡Claro!", "Excelente pregunta", "Espero que te sirva", "No dudes en...", "Como IA...", resumir lo que el cliente acaba de decir.
-- No uses "depende" sin decir de qué depende y cuál es tu recomendación.
-- Si el cliente propone una técnica inadecuada, corrígelo con el motivo técnico, sin regañar.
-
-PARÁMETROS DE PRODUCCIÓN (temperatura, tiempo, presión, despegue):
-- Da el RANGO DE REFERENCIA de la base de conocimiento como punto de partida.
-- Aclara en la misma frase que se confirma con la ficha técnica del proveedor del film/papel/vinil y recomienda una prueba en retazo.
-- Nunca te niegues a orientar y nunca presentes un rango como valor universal.
-
-REGLAS:
-- No le pidas al cliente que elija una técnica que tú puedes determinar.
-- No inventes DPI, centímetros, resolución real, perfiles ni funciones de herramientas no documentadas.
-- No culpes a NOVAGE, cliente o imprenta sin descartar causas.
-- Si el cliente dijo que una solución anterior NO funcionó: no la repitas; explica qué causa descarta ese resultado y pasa a la siguiente.
-- Usa herramientas NOVAGE solo cuando realmente ayudan; si el problema es de prensa o material, la solución puede no llevar herramienta.
-- Antes de recomendar una herramienta NOVAGE, confirma que el usuario ya tenga un ARCHIVO DE DISEÑO utilizable. Una foto/mockup del producto terminado no es un archivo utilizable.
-- No presentes el Mejorador con IA como reconstrucción generativa: su función dentro de NOVAGE es mejorar/upscale un diseño existente, no inventar las partes que no existen en la fuente.
-
-CASO CLAVE: DISEÑO DETALLADO DE INTERNET/PINTEREST CON FONDO NEGRO + PLAYERA NEGRA CONFIRMADA
-Esta regla SOLO aplica si el usuario tiene una IMAGEN DEL DISEÑO en plano, completa y utilizable.
-NO aplica si solo tiene una foto/mockup de una playera estampada.
-- No vectorizar como primera opción.
-- Aprovechar el negro de la tela para evitar imprimir una gran plasta negra.
-- Si el archivo del DISEÑO viene de Pinterest/internet y ya es un arte plano utilizable, el PRIMER paso puede ser Mejorador con IA para hacer upscaling/mejorar resolución. Indica que descargue ese archivo mejorado.
-- El Mejorador NO reconstruye perspectiva, letras tapadas ni partes faltantes.
-- Después pasar el archivo mejorado por Semitonos Fáciles para un flujo sencillo, o Semitonos Profesionales si necesita mayor control.
-- Explica que el objetivo es conservar textura/detalle y aprovechar el negro de la prenda.
-- Da los pasos en orden 1, 2, 3, 4.
-
-CASO CLAVE: DISEÑO DETALLADO CON FONDO NEGRO + PLAYERA NO NEGRA CONFIRMADA
-- Explica que la composición depende visualmente del negro.
-- No prometas que quitar el fondo dejará el mismo resultado.
-- Recomienda adaptar/rediseñar el arte para esa prenda antes de imprimir.
-
-CASO CLAVE: BORDES BLANCOS
-- Si plantilla NOVAGE + blanco principalmente de un lado: fuerte indicador de desfase/desregistro tinta blanca-color.
-- Si plantilla externa no revisada al final: semitransparencias del archivo final ganan probabilidad.
-- Si plantilla externa revisada/limpia + blanco de un lado: desfase de tinta blanca gana probabilidad.
-- Si blanco rodea uniformemente todos los píxeles: revisar semitransparencias, residuos o halo del archivo.
-- No digas 100% solo por foto; usa causa más probable / indicador fuerte.
-
-DIFERENCIAS CLAVE:
-- foto/anime/arte complejo/texturas -> Mejorador con IA.
-- logo/texto/gráfico plano/pocos colores -> Vectorizador NOVAGE.
-- fondo ajeno separable -> Eliminador de Fondos.
-- humo/sombra/degradado integrado -> Semitonos.
-- Guía de Medidas decide; Redimensionador aplica.
-- Semitonos Fáciles prioriza rapidez; Semitonos Profesionales mayor control.
-
-CAMPO tools:
-- Solo herramientas que aparecen en tus pasos, en el orden en que se usan, máximo 3.
-- Usa "Crear Plantilla DTF" (no "Armador de Plantilla DTF").
-- Si la solución no requiere herramienta NOVAGE, devuelve [].
-- Semitonos Profesionales puede mencionarse en el texto aunque no exista tarjeta configurada.
+HERRAMIENTAS:
+Devuelve en "tools" solo herramientas NOVAGE que el usuario YA puede usar en ese momento.
+Si primero necesita conseguir, recrear o corregir el arte fuera del Taller, devuelve [].
+Máximo 3 herramientas.
 `;
 
 async function callOpenAI(payload) {
@@ -640,60 +514,33 @@ async function callOpenAI(payload) {
   return data;
 }
 
-function slugKey(value) {
-  return String(value || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 50);
-}
-
-// Valida la pregunta personalizada del Gate. Devuelve null si no sirve.
-function buildCustomDecision(parsed, resolvedFacts) {
-  const slug = slugKey(parsed?.custom_key);
-  const question = String(parsed?.custom_question || "").trim().slice(0, 200);
-  const message = String(parsed?.custom_message || "").trim().slice(0, 400);
-  const options = [
-    ...new Set(
-      (Array.isArray(parsed?.custom_options) ? parsed.custom_options : [])
-        .filter((value) => typeof value === "string")
-        .map((value) => value.trim().slice(0, 60))
-        .filter(Boolean)
-    )
-  ].slice(0, 4);
-
-  if (!slug || !question || options.length < 2) return null;
-
-  const key = `custom_${slug}`;
-  if (resolvedFacts.has(key) || resolvedFacts.has(slug)) return null;
-
-  return {
-    key,
-    message: message || "Necesito un solo dato para darte el diagnóstico correcto.",
-    question,
-    options
-  };
-}
-
-async function runDecisionGate({ message, image, imageFromContext, sharedContext, resolvedFacts }) {
+async function runDecisionGate({
+  message,
+  image,
+  imageFromContext,
+  sharedContext,
+  resolvedFacts
+}) {
   const content = [
     {
       type: "input_text",
       text: [
-        `Consulta actual del cliente:\n${message || "Analiza la imagen adjunta."}`,
+        `Consulta actual:\n${message || "Analiza la imagen adjunta."}`,
         imageFromContext
-          ? "\n[La imagen adjunta es el diseño que el cliente compartió antes en esta conversación.]"
+          ? "\n[La imagen adjunta es la misma que el cliente compartió antes.]"
           : "",
-        `\nVariables decisivas ya resueltas: ${[...resolvedFacts].join(", ") || "ninguna"}`,
+        `\nVariables ya resueltas: ${[...resolvedFacts].join(", ") || "ninguna"}`,
         sharedContext
       ].join("\n")
     }
   ];
 
   if (image) {
-    content.push({ type: "input_image", image_url: image, detail: "high" });
+    content.push({
+      type: "input_image",
+      image_url: image,
+      detail: "high"
+    });
   }
 
   const data = await callOpenAI({
@@ -701,9 +548,7 @@ async function runDecisionGate({ message, image, imageFromContext, sharedContext
     instructions: GATE_INSTRUCTIONS,
     input: [{ role: "user", content }],
     reasoning: { effort: "low" },
-    // El razonamiento consume tokens de salida: con 500 la respuesta se cortaba
-    // y el Gate caía siempre en "none".
-    max_output_tokens: 2500,
+    max_output_tokens: 1800,
     text: {
       format: {
         type: "json_schema",
@@ -715,7 +560,7 @@ async function runDecisionGate({ message, image, imageFromContext, sharedContext
             case_type: {
               type: "string",
               enum: [
-                "reference_mockup",
+                "reference_only_art",
                 "detailed_black_background",
                 "white_border_print",
                 "pixelated_design",
@@ -767,10 +612,10 @@ async function runDecisionGate({ message, image, imageFromContext, sharedContext
       }
     },
     store: false,
-    prompt_cache_key: "novage-decision-gate-v4-3"
+    prompt_cache_key: "novage-gate-v5"
   });
 
-  const parsed = parseJsonOutput(data, {
+  return parseJsonOutput(data, {
     case_type: "other",
     missing_fact: "none",
     custom_key: "",
@@ -778,30 +623,30 @@ async function runDecisionGate({ message, image, imageFromContext, sharedContext
     custom_question: "",
     custom_options: [],
     confidence: "low",
-    reason: "No se pudo clasificar."
+    reason: ""
   });
-
-  if (resolvedFacts.has(parsed.missing_fact)) {
-    parsed.missing_fact = "none";
-  }
-
-  return { parsed, responseId: data.id || null };
 }
 
-async function runSolution({ message, image, imageFromContext, sharedContext, gateInfo, forcedByLimit }) {
+async function runSolution({
+  message,
+  image,
+  imageFromContext,
+  sharedContext,
+  gateInfo,
+  dissatisfaction
+}) {
   const content = [
     {
       type: "input_text",
       text: [
-        `Consulta actual del cliente:\n${message || "Analiza la imagen adjunta."}`,
+        `Consulta actual:\n${message || "Analiza la imagen adjunta."}`,
         imageFromContext
-          ? "\n[La imagen adjunta es el diseño que el cliente compartió antes en esta conversación. Analízala.]"
+          ? "\n[La imagen adjunta es la misma que el cliente compartió antes. Analízala.]"
           : "",
-        gateInfo
-          ? `\nCLASIFICACIÓN PREVIA DEL CASO: ${gateInfo.caseType} | motivo: ${gateInfo.reason || "sin detalle"}`
-          : "",
-        forcedByLimit
-          ? "\nYa se hicieron varias preguntas seguidas. Resuelve con lo disponible y declara tus supuestos."
+        `\nCLASIFICACIÓN DEL CASO: ${gateInfo.caseType}`,
+        gateInfo.reason ? `\nMotivo: ${gateInfo.reason}` : "",
+        dissatisfaction
+          ? "\nIMPORTANTE: el cliente dijo que la respuesta anterior no le resolvió. No repitas la misma ruta. Sé breve, reconoce el límite real y da la alternativa útil."
           : "",
         sharedContext
       ].join("\n")
@@ -809,7 +654,11 @@ async function runSolution({ message, image, imageFromContext, sharedContext, ga
   ];
 
   if (image) {
-    content.push({ type: "input_image", image_url: image, detail: "high" });
+    content.push({
+      type: "input_image",
+      image_url: image,
+      detail: "high"
+    });
   }
 
   const data = await callOpenAI({
@@ -817,8 +666,7 @@ async function runSolution({ message, image, imageFromContext, sharedContext, ga
     instructions: SOLUTION_INSTRUCTIONS,
     input: [{ role: "user", content }],
     reasoning: { effort: "medium" },
-    // Incluye margen para el razonamiento; con 2200 la respuesta podía quedar truncada.
-    max_output_tokens: 7000,
+    max_output_tokens: 2600,
     text: {
       format: {
         type: "json_schema",
@@ -841,162 +689,164 @@ async function runSolution({ message, image, imageFromContext, sharedContext, ga
         }
       }
     },
-    store: true,
-    prompt_cache_key: "novage-solution-v4-3",
-    metadata: {
-      app: "novage-ai",
-      knowledge_version: KNOWLEDGE_VERSION
-    }
+    store: false,
+    prompt_cache_key: "novage-solution-v5"
   });
 
-  const rawText = extractText(data);
   const parsed = parseJsonOutput(data, {
-    // Nunca mostrar JSON roto al cliente.
-    message: rawText && !rawText.startsWith("{")
-      ? rawText
-      : "No pude terminar la respuesta. Envíame tu mensaje de nuevo, por favor.",
+    message: "No pude terminar la respuesta. Intenta enviarla de nuevo.",
     tools: []
   });
 
   const tools = Array.isArray(parsed.tools)
-    ? [
-        ...new Set(
-          parsed.tools
-            .filter((name) => TOOL_NAMES.includes(name))
-            .map((name) => (name === "Armador de Plantilla DTF" ? "Crear Plantilla DTF" : name))
-        )
-      ].slice(0, 4)
+    ? [...new Set(parsed.tools.filter((name) => TOOL_NAMES.includes(name)))].slice(0, 3)
     : [];
 
   return {
-    message: typeof parsed.message === "string" && parsed.message.trim()
-      ? parsed.message.trim()
-      : "No se pudo generar una respuesta.",
-    tools,
-    responseId: data.id || null
+    message:
+      typeof parsed.message === "string" && parsed.message.trim()
+        ? parsed.message.trim()
+        : "No pude generar una respuesta.",
+    tools
   };
 }
 
 export default async function handler(req, res) {
+  setCors(req, res);
+
+  const origin = String(req.headers.origin || "");
+
+  if (origin && !isAllowedOrigin(origin)) {
+    return res.status(403).json({ error: "Origen no permitido." });
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método no permitido" });
+    return res.status(405).json({ error: "Método no permitido." });
   }
 
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "OPENAI_API_KEY no está configurada." });
-    }
-
-    if (!process.env.NOVAGE_VECTOR_STORE_ID) {
-      return res.status(500).json({ error: "NOVAGE_VECTOR_STORE_ID no está configurado." });
-    }
-
-    if (!process.env.NOVAGE_CASES_VECTOR_STORE_ID) {
-      return res.status(500).json({ error: "NOVAGE_CASES_VECTOR_STORE_ID no está configurado." });
-    }
-
-    const limit = checkRateLimit(getClientIp(req));
-    if (!limit.allowed) {
-      return res.status(429).json({
-        error: "Has alcanzado el límite temporal de NOVAGE AI. Intenta nuevamente más tarde."
+      return res.status(500).json({
+        error: "OPENAI_API_KEY no está configurada."
       });
     }
 
-    const { mensaje, imagen: imagenRaw, imagenContexto, conversationContext } = req.body || {};
-    const message = typeof mensaje === "string" ? mensaje.trim().slice(0, 6000) : "";
-    const imagen =
-      typeof imagenRaw === "string" && imagenRaw.startsWith("data:image/") ? imagenRaw : null;
-    const imageFromContext = Boolean(imagen && imagenContexto === true);
+    if (!process.env.NOVAGE_VECTOR_STORE_ID) {
+      return res.status(500).json({
+        error: "NOVAGE_VECTOR_STORE_ID no está configurado."
+      });
+    }
 
-    if (!message && !imagen) {
-      return res.status(400).json({ error: "Escribe un mensaje o sube una imagen." });
+    const limit = checkRateLimit(getClientIp(req));
+
+    if (!limit.allowed) {
+      return res.status(429).json({
+        error: "Has alcanzado el límite temporal. Intenta nuevamente más tarde."
+      });
+    }
+
+    const {
+      mensaje,
+      imagen: imagenRaw,
+      imagenContexto,
+      conversationContext
+    } = req.body || {};
+
+    const message =
+      typeof mensaje === "string" ? mensaje.trim().slice(0, 6000) : "";
+
+    const image =
+      typeof imagenRaw === "string" && imagenRaw.startsWith("data:image/")
+        ? imagenRaw
+        : null;
+
+    const imageFromContext = Boolean(image && imagenContexto === true);
+
+    if (!message && !image) {
+      return res.status(400).json({
+        error: "Escribe un mensaje o sube una imagen."
+      });
     }
 
     const conversation = cleanConversationContext(conversationContext);
     const resolvedFacts = collectResolvedFacts(message, conversation);
     const confirmedFacts = buildConfirmedFacts(message, conversation);
-    const forceSolution = questionsInRow(conversation) >= MAX_QUESTIONS_IN_ROW;
 
     const retrievalQuery = buildRetrievalQuery(
-      message || "Analiza el archivo adjunto para preparación DTF.",
+      message || "Analiza el archivo adjunto.",
       conversation
     );
 
-    const [knowledgeSettled, casesSettled] = await Promise.allSettled([
-      searchVectorStore(process.env.NOVAGE_VECTOR_STORE_ID, retrievalQuery, {
-        maxResults: KNOWLEDGE_RESULTS
-      }),
-      searchVectorStore(process.env.NOVAGE_CASES_VECTOR_STORE_ID, retrievalQuery, {
-        maxResults: CASE_RESULTS,
-        filters: { type: "eq", key: "resolved", value: true }
-      })
-    ]);
+    let knowledgeResults = [];
 
-    const knowledgeResults =
-      knowledgeSettled.status === "fulfilled" ? knowledgeSettled.value : [];
-    const caseResults =
-      casesSettled.status === "fulfilled" ? casesSettled.value : [];
-
-    if (knowledgeSettled.status === "rejected") {
-      console.error("NOVAGE knowledge search error:", knowledgeSettled.reason);
+    try {
+      knowledgeResults = await searchVectorStore(
+        process.env.NOVAGE_VECTOR_STORE_ID,
+        retrievalQuery,
+        KNOWLEDGE_RESULTS
+      );
+    } catch (error) {
+      console.error("NOVAGE knowledge search error:", error);
     }
 
-    if (casesSettled.status === "rejected") {
-      console.error("NOVAGE cases search error:", casesSettled.reason);
-    }
+    const officialContext = formatSearchResults(knowledgeResults);
 
-    const officialContext = formatSearchResults(knowledgeResults, {
-      maxChars: 15000,
-      minScore: 0
-    });
+    const sharedContext = `
+HECHOS CONFIRMADOS:
+${confirmedFacts.length ? confirmedFacts.join("\n") : "Ninguno adicional."}
 
-    const solvedCasesContext = formatSearchResults(caseResults, {
-      maxChars: 9000,
-      minScore: CASE_MIN_SCORE
-    });
+CONOCIMIENTO OFICIAL NOVAGE:
+${officialContext || "No se recuperó información específica. No inventes funciones de NOVAGE."}
 
-    const sharedContext = buildSharedContext(
-      officialContext,
-      solvedCasesContext,
-      conversation,
-      confirmedFacts
-    );
+CONVERSACIÓN ACTUAL:
+${conversationAsText(conversation) || "Sin contexto previo."}
+`;
 
-    // Si el Gate falla, no tumbamos la conversación: pasamos directo a resolver.
     let gate;
+
     try {
       gate = await runDecisionGate({
         message,
-        image: imagen,
+        image,
         imageFromContext,
         sharedContext,
         resolvedFacts
       });
-    } catch (gateError) {
-      console.error("NOVAGE gate error:", gateError);
+    } catch (error) {
+      console.error("NOVAGE gate error:", error);
       gate = {
-        parsed: { case_type: "other", missing_fact: "none", confidence: "low", reason: "" },
-        responseId: null
+        case_type: "other",
+        missing_fact: "none",
+        confidence: "low",
+        reason: ""
       };
     }
 
-    let missingFact = forceSolution ? "none" : gate.parsed?.missing_fact || "none";
+    let missingFact = gate?.missing_fact || "none";
 
-    // Guardrail determinista: diseño detallado con fondo negro exige conocer el
-    // color de la prenda, salvo que ya esté resuelto (botón o texto libre).
+    if (resolvedFacts.has(missingFact)) {
+      missingFact = "none";
+    }
+
     if (
-      !forceSolution &&
-      gate.parsed?.case_type === "detailed_black_background" &&
-      !resolvedFacts.has("garment_black")
+      gate?.case_type === "reference_only_art"
     ) {
-      missingFact = "garment_black";
+      missingFact = "none";
     }
 
     let decision = null;
+
     if (missingFact === "custom") {
-      decision = buildCustomDecision(gate.parsed, resolvedFacts);
+      decision = buildCustomDecision(gate, resolvedFacts);
     } else if (missingFact !== "none" && DECISIONS[missingFact]) {
-      decision = { key: missingFact, ...DECISIONS[missingFact] };
+      decision = {
+        key: missingFact,
+        ...DECISIONS[missingFact]
+      };
     }
 
     if (decision) {
@@ -1009,52 +859,38 @@ export default async function handler(req, res) {
           options: decision.options
         },
         tools: [],
-        responseId: gate.responseId || `gate-${Date.now()}`,
-        remaining: limit.remaining,
-        gate: {
-          caseType: gate.parsed?.case_type || "other",
-          confidence: gate.parsed?.confidence || "low"
-        },
-        retrieval: {
-          knowledge: compactHitMetadata(knowledgeResults),
-          cases: compactHitMetadata(caseResults, CASE_MIN_SCORE)
-        }
+        remaining: limit.remaining
       });
     }
 
     const solution = await runSolution({
       message,
-      image: imagen,
+      image,
       imageFromContext,
       sharedContext,
       gateInfo: {
-        caseType: gate.parsed?.case_type || "other",
-        reason: gate.parsed?.reason || ""
+        caseType: gate?.case_type || "other",
+        reason: gate?.reason || ""
       },
-      forcedByLimit: forceSolution
+      dissatisfaction: DISSATISFACTION_REGEX.test(message)
     });
 
     return res.status(200).json({
       respuesta: solution.message,
       estado: "solution",
-      decision: { key: "", question: "", options: [] },
-      tools: solution.tools,
-      responseId: solution.responseId,
-      remaining: limit.remaining,
-      gate: {
-        caseType: gate.parsed?.case_type || "other",
-        confidence: gate.parsed?.confidence || "low"
+      decision: {
+        key: "",
+        question: "",
+        options: []
       },
-      retrieval: {
-        knowledge: compactHitMetadata(knowledgeResults),
-        cases: compactHitMetadata(caseResults, CASE_MIN_SCORE)
-      }
+      tools: solution.tools,
+      remaining: limit.remaining
     });
   } catch (error) {
     console.error("NOVAGE AI Error:", error);
 
     return res.status(500).json({
-      error: "Ocurrió un error interno al procesar la solicitud.",
+      error: "Ocurrió un error al procesar la solicitud.",
       details: error?.message || "Error desconocido"
     });
   }
